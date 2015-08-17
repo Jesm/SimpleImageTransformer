@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+	<meta charset="UTF-8">
+	<title>SimpleImageTransformer</title>
+	<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+	<main>
+		<section id="sidebar">
+			<h2>1. Selecione sua imagem</h2>
+			<input type="file" id="file-load">
+			<div id="image-info"></div>
+
+			<h2>2. Selecione a operação que deseja realizar</h2>
+			<button data-action="display_info">Exibir informações</button>
+		</section>
+		<section id="content">
+		</section>
+	</main>
+
+	<script src="js/App.js"></script>
+	<script>
+		App.init({
+			sidebar:document.getElementById('sidebar'),
+			input:document.getElementById('file-load'),
+			info:document.getElementById('image-info'),
+			content:document.getElementById('content')
+		});
+	</script>
+</body>
+</html>
