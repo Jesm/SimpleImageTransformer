@@ -84,7 +84,7 @@ var App = {
 
 
 		// Itera sobre todos os pixels, realizando as verificações necessárias
-		this.forEachPixel(imgData, function(x, y, pixel){
+		this.forEachPixel(imgData, function(pixel, x, y){
 
 			// var pixelGrayscale = Math.round((pixel[0] + pixel[1] + pixel[2]) / 3);
 			var red = pixel[0];
@@ -120,7 +120,7 @@ var App = {
 			var offset = pixelLength * width * y;
 			for(var x = 0; x < width; x++){
 				var index = offset + width * x;
-				callback.call(self, x, y, data.slice(index, index + pixelLength));
+				callback.call(self, data.slice(index, index + pixelLength), x, y);
 			}
 		}
 	},
