@@ -8,8 +8,8 @@ var App = {
 		};
 		
 		var buttons = args.sidebar.getElementsByTagName('button');
-		for(var len = buttons.length;len--;)
-			buttons[len].addEventListener('click', this._buttonClick);
+		for(var btn of buttons)
+			btn.addEventListener('click', this._buttonClick);
 		
 		this.html.input.addEventListener('change', this._uploadFile);
 
@@ -76,7 +76,9 @@ var App = {
 			obj = {
 				halfHeight: imgData.height/2,
 				histogram: new Array(256),
+				allPixels: [],
 				topPixels: [],
+				bottomPixels: []
 			};
 
 		for(var len = 256; len--;)
@@ -90,21 +92,21 @@ var App = {
 			var red = pixel[0];
 			this.histogram[red]++;
 
-			if(y < this.halfHeight)
-				this.topPixels.push(red);
+			this.allPixels.push(red);
+			this[ y < this.halfHeight ? 'topPixels' : 'bottomPixels' ].push(red);
 
 		}, obj);
 
 
 		// Exibir resultados na interface
 		var infoElement = this.html.imageInfo,
-			list = this._create('ul'),
-			adder = (a, b) => a + b;
+			list = this._create('ul');
 
-		window.test = obj.topPixels;
+		var topPixelsAvg = this._average(obj.topPixels);
+		this._create('li', '<strong>Média de cinza na metade superior:</strong> ' + topPixelsAvg.toFixed(2), list);
 
-		var topPixelsAvg = Math.round(obj.topPixels.reduce(adder) / obj.topPixels.length);
-		this._create('li', '<strong>Média de cinza na metade superior:</strong> ' + topPixelsAvg, list);
+		var bottomPixelsMedian = this._median(obj.bottomPixels);
+		this._create('li', '<strong>Mediana de cinza na metade inferior:</strong> ' + bottomPixelsMedian.toFixed(2), list);
 
 		infoElement.innerHTML = '';
 		infoElement.appendChild(list);
@@ -125,7 +127,7 @@ var App = {
 		}
 	},
 
-	_create:function(str, content, parentNode){
+	_create: function(str, content, parentNode){
 		var element = document.createElement(str);
 
 		if(content)
@@ -135,6 +137,16 @@ var App = {
 			parentNode.appendChild(element);
 
 		return element;
+	},
+
+	_average: function(arr){
+		return arr.length ? arr.reduce((a, b) => a + b) / arr.length : 0;
+	},
+
+	_median: function(arr){
+		arr = arr.slice().sort();
+		var half = Math.floor(arr.length / 2);
+		return arr.length % 2 ? arr[half] : (arr[half] + arr[half - 1]) / 2;
 	}
 	
 };
