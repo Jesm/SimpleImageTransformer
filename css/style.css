@@ -32,9 +32,12 @@ main{
 }
 
 #content{
+	margin-top:20px;
 	float: left;
 }
 canvas{
-	display: block;
-	border: 1px solid #333;
+	display: none;
+}
+canvas.active{
+	display:block;
 }
