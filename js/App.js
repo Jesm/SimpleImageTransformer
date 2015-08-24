@@ -103,10 +103,19 @@ var App = {
 			list = this._create('ul');
 
 		var topPixelsAvg = this._average(obj.topPixels);
-		this._create('li', '<strong>Média de cinza na metade superior:</strong> ' + topPixelsAvg.toFixed(2), list);
+		this._create('li', '<strong>Média de cinza na metade superior da imagem:</strong> ' + topPixelsAvg.toFixed(2), list);
 
 		var bottomPixelsMedian = this._median(obj.bottomPixels);
-		this._create('li', '<strong>Mediana de cinza na metade inferior:</strong> ' + bottomPixelsMedian.toFixed(2), list);
+		this._create('li', '<strong>Mediana de cinza na metade inferior da imagem:</strong> ' + bottomPixelsMedian.toFixed(2), list);
+
+		var histogramMax = Math.max.apply(Math, obj.histogram),
+			indexes = obj.histogram.reduce(function(arr, value, index){
+				if(value == histogramMax)
+					arr.push(index);
+				
+				return arr;
+			}, []);
+		this._create('li', '<strong>Moda(s) de cinza em toda a imagem:</strong> ' + indexes.join(', '), list);
 
 		infoElement.innerHTML = '';
 		infoElement.appendChild(list);
