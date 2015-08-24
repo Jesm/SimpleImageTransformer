@@ -56,6 +56,7 @@ var App = {
 		
 		this.loadedImage = true;
 		document.body.classList.add('img-loaded');
+		this.html.result.innerHTML = '';
 	},
 	
 	getPreviewImageData: function(){
@@ -104,15 +105,17 @@ var App = {
 
 		// Exibir resultados na interface
 		var result = this.html.result,
+			fragment = document.createDocumentFragment(),
 			list = this._create('ul');
 
 		list.classList.add('featured-box');
+		fragment.appendChild(list);
 
 		var topPixelsAvg = this._average(obj.topPixels);
-		this._create('li', '<strong>Média de cinza na metade superior da imagem:</strong> ' + topPixelsAvg.toFixed(2), list);
+		this._create('li', `<strong>Média de cinza na metade superior da imagem:</strong> ${ topPixelsAvg.toFixed(2) }`, list);
 
 		var bottomPixelsMedian = this._median(obj.bottomPixels);
-		this._create('li', '<strong>Mediana de cinza na metade inferior da imagem:</strong> ' + bottomPixelsMedian.toFixed(2), list);
+		this._create('li', `<strong>Mediana de cinza na metade inferior da imagem:</strong> ${ bottomPixelsMedian.toFixed(2) }`, list);
 
 		var histogramMax = Math.max.apply(Math, obj.histogram),
 			indexes = obj.histogram.reduce(function(arr, value, index){
@@ -121,12 +124,15 @@ var App = {
 
 				return arr;
 			}, []),
-			tmpStr = '<strong>Moda de cinza em toda a imagem:</strong> ' + indexes.join(', ');
-		tmpStr += ' (' + obj.histogram[indexes[0]] + ' aparições)';
+			tmpStr = `<strong>Moda de cinza em toda a imagem:</strong> ${ indexes.join(', ') }`;
+		tmpStr += ` (${ obj.histogram[indexes[0]] } aparições)`;
 		this._create('li', tmpStr, list);
 
+		var variance = this._variance(obj.allPixels);
+		this._create('li', `<strong>Variância de cinza em toda a imagem:</strong> ${ variance.toFixed(2) }`, list);
+
 		result.innerHTML = '';
-		result.appendChild(list);
+		result.appendChild(fragment);
 	},
 	
 	forEachPixel: function(imageData, callback, self){
@@ -138,7 +144,7 @@ var App = {
 		for(var y = 0; y < height; y++){
 			var offset = pixelLength * width * y;
 			for(var x = 0; x < width; x++){
-				var index = offset + width * x;
+				var index = pixelLength * x + offset;
 				callback.call(self, data.slice(index, index + pixelLength), x, y);
 			}
 		}
@@ -164,6 +170,11 @@ var App = {
 		arr = arr.slice().sort();
 		var half = Math.floor(arr.length / 2);
 		return arr.length % 2 ? arr[half] : (arr[half] + arr[half - 1]) / 2;
+	},
+
+	_variance: function(arr){
+		var avg = this._average(arr);
+		return arr.length > 1 ? arr.reduce((a, b) => a + Math.pow(b - avg, 2)) / (arr.length - 1): 0;
 	}
 	
 };
