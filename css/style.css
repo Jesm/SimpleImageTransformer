@@ -14,15 +14,20 @@ body{
 main{
 	overflow: hidden;
 }
+ul{
+	list-style: inside;
+}
 
-#sidebar{
-	margin: 20px;
-	width: 350px;
+.featured-box{
 	padding: 20px;
-	float: left;
 	border-radius: 10px;
 	background: #FFF;
 	box-shadow: 1px 1px 3px;
+}
+#sidebar{
+	margin: 20px;
+	width: 350px;
+	float: left;
 }
 #sidebar h2{
 	margin: 20px auto;
@@ -32,7 +37,13 @@ main{
 }
 #sidebar ul{
 	padding: 0;
-	list-style: inside;
+}
+#sidebar .operations{
+	display: none;
+	margin-top: 30px;
+}
+.img-loaded #sidebar .operations{
+	display: block;
 }
 
 #image-info{
@@ -48,4 +59,11 @@ canvas{
 }
 canvas.active{
 	display:block;
+}
+#content .result{
+	margin-top: 30px;
+}
+#content ul{
+	padding: 20px;
+	background: #FFF;
 }

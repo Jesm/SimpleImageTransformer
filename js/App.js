@@ -3,8 +3,7 @@ var App = {
 	init: function(args){
 		this.loadedImage = false;
 		this.html = {
-			input: args.input,
-			imageInfo: args.info
+			input: args.input
 		};
 		
 		var buttons = args.sidebar.getElementsByTagName('button');
@@ -19,9 +18,13 @@ var App = {
 	_buildContent: function(element){
 		var fragment = document.createDocumentFragment();
 		
-		this.html.preview = document.createElement('canvas');
+		this.html.preview = this._create('canvas');
 		fragment.appendChild(this.html.preview);
 		this.previewContext = this.html.preview.getContext('2d');
+
+		this.html.result = this._create('div');
+		this.html.result.classList.add('result');
+		fragment.appendChild(this.html.result);
 
 		element.appendChild(fragment);
 	},
@@ -52,6 +55,7 @@ var App = {
 		this.previewContext.drawImage(image, 0, 0);
 		
 		this.loadedImage = true;
+		document.body.classList.add('img-loaded');
 	},
 	
 	getPreviewImageData: function(){
@@ -99,8 +103,10 @@ var App = {
 
 
 		// Exibir resultados na interface
-		var infoElement = this.html.imageInfo,
+		var result = this.html.result,
 			list = this._create('ul');
+
+		list.classList.add('featured-box');
 
 		var topPixelsAvg = this._average(obj.topPixels);
 		this._create('li', '<strong>Média de cinza na metade superior da imagem:</strong> ' + topPixelsAvg.toFixed(2), list);
@@ -112,13 +118,15 @@ var App = {
 			indexes = obj.histogram.reduce(function(arr, value, index){
 				if(value == histogramMax)
 					arr.push(index);
-				
-				return arr;
-			}, []);
-		this._create('li', '<strong>Moda(s) de cinza em toda a imagem:</strong> ' + indexes.join(', '), list);
 
-		infoElement.innerHTML = '';
-		infoElement.appendChild(list);
+				return arr;
+			}, []),
+			tmpStr = '<strong>Moda de cinza em toda a imagem:</strong> ' + indexes.join(', ');
+		tmpStr += ' (' + obj.histogram[indexes[0]] + ' aparições)';
+		this._create('li', tmpStr, list);
+
+		result.innerHTML = '';
+		result.appendChild(list);
 	},
 	
 	forEachPixel: function(imageData, callback, self){

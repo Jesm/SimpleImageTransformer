@@ -7,14 +7,14 @@
 </head>
 <body>
 	<main>
-		<section id="sidebar">
+		<section id="sidebar" class="featured-box">
 			<h2>1. Selecione sua imagem</h2>
 			<input type="file" id="file-load" autocomplete="off">
-
-			<h2>2. Selecione a operação que deseja realizar</h2>
-			<button data-action="display_info">Exibir informações</button>
 			
-			<div id="image-info"></div>
+			<div class="operations">
+				<h2>2. Selecione a operação que deseja realizar</h2>
+				<button data-action="display_info">Exibir informações</button>
+			</div>
 		</section>
 		<section id="content">
 		</section>
@@ -25,7 +25,6 @@
 		App.init({
 			sidebar: document.getElementById('sidebar'),
 			input: document.getElementById('file-load'),
-			info: document.getElementById('image-info'),
 			content: document.getElementById('content')
 		});
 	</script>
