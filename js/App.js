@@ -7,8 +7,9 @@ var App = {
 		};
 		
 		var buttons = args.sidebar.getElementsByTagName('button');
-		for(var btn of buttons)
+		[].slice.call(buttons).forEach(function(btn){
 			btn.addEventListener('click', this._buttonClick);
+		}, this);
 		
 		this.html.input.addEventListener('change', this._uploadFile);
 
