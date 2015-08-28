@@ -1,3 +1,5 @@
+'use strict';
+
 var App = {
 
 	init: function(args){
@@ -266,7 +268,7 @@ var App = {
 			max = Math.ceil(this._getHistogramMax(arr) * 1.15);
 
 		root.classList.add('histogram');
-		this._create('span', arr.length, root).classList.add('histogram-max-x');
+		this._create('span', arr.length - 1, root).classList.add('histogram-max-x');
 		this._create('span', '0', root).classList.add('histogram-min-x');
 		this._create('span', max, root).classList.add('histogram-max-y');
 		this._create('span', '0', root).classList.add('histogram-min-y');
