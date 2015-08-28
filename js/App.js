@@ -72,6 +72,7 @@ var App = {
 		var methods = {
 			display_info: 'displayInfo',
 			bigger_avg_black: 'paintBlackBiggerAvg',
+			bigger_mode_150: 'paint150BiggerMode',
 		};
 		
 		this[methods[str]]();
@@ -106,15 +107,9 @@ var App = {
 		var bottomPixelsMedian = this._median(bottomPixels);
 		this._create('li', `<strong>Mediana de cinza na metade inferior da imagem:</strong> ${ bottomPixelsMedian.toFixed(2) }`, list);
 
-		var histogramMax = this._getHistogramMax(obj.histogram),
-			indexes = obj.histogram.reduce(function(arr, value, index){
-				if(value == histogramMax)
-					arr.push(index);
-
-				return arr;
-			}, []),
-			tmpStr = `<strong>Moda de cinza em toda a imagem:</strong> ${ indexes.join(', ') }`;
-		tmpStr += ` (${ obj.histogram[indexes[0]] } aparições)`;
+		var modes = this._getModesFromHistogram(obj.histogram),
+			tmpStr = `<strong>Moda de cinza em toda a imagem:</strong> ${ modes.join(', ') }`;
+		tmpStr += ` (${ obj.histogram[modes[0]] } aparições)`;
 		this._create('li', tmpStr, list);
 
 		var variance = this._variance(obj.allPixels);
@@ -134,6 +129,24 @@ var App = {
 		this.forEachPixel(imgData, function(pixel, _, __, index){
 			var colorValue = this.averagePixel(pixel),
 				newPixel = colorValue >= avg ? blackPixel : pixel;
+
+			this.setPixel(newImgData, index, newPixel);
+		}, this);
+
+		var canvas = this._createCanvasFromImageData(newImgData);
+		this._replaceResultContent(canvas);
+	},
+
+	paint150BiggerMode: function(){
+		var imgData = this.getPreviewImageData(),
+			obj = this.getImageDataInfo(imgData),
+			mode = this._getModesFromHistogram(obj.histogram)[0],
+			newImgData = this.previewContext.createImageData(imgData),
+			pixel150 = [150, 150, 150, 255];
+
+		this.forEachPixel(imgData, function(pixel, _, __, index){
+			var colorValue = this.averagePixel(pixel),
+				newPixel = colorValue >= mode ? pixel150 : pixel;
 
 			this.setPixel(newImgData, index, newPixel);
 		}, this);
@@ -233,6 +246,18 @@ var App = {
 
 	_getHistogramMax: function(arr){
 		return Math.max.apply(Math, arr);
+	},
+
+	_getModesFromHistogram: function(arr){
+		var max = this._getHistogramMax(arr),
+			indexes = arr.reduce(function(arr, value, index){
+				if(value == max)
+					arr.push(index);
+
+				return arr;
+			}, []);
+
+		return indexes;
 	},
 
 	_getHistogramComponent: function(arr){
