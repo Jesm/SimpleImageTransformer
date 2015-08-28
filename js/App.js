@@ -70,39 +70,24 @@ var App = {
 
 	execute: function(str){
 		var methods = {
-			display_info: 'displayInfo'
+			display_info: 'displayInfo',
+			bigger_avg_black: 'paintBlackBiggerAvg',
 		};
 		
 		this[methods[str]]();
 	},
 	
 	displayInfo: function(){
-		var prev = this.html.preview,
-			imgData = this.getPreviewImageData(),
-			obj = {
-				halfHeight: imgData.height/2,
-				histogram: new Array(256),
-				allPixels: [],
-				topPixels: [],
-				bottomPixels: []
-			};
+		var imgData = this.getPreviewImageData(),
+			obj = this.getImageDataInfo(imgData),
+			halfHeight = imgData.height / 2,
+			topPixels = [],
+			bottomPixels = [];
 
-		for(var len = 256; len--;)
-			obj.histogram[len] = 0;
-
-
-		// Itera sobre todos os pixels, realizando as verificações necessárias
-		this.forEachPixel(imgData, function(pixel, x, y){
-
-			// var pixelGrayscale = Math.round((pixel[0] + pixel[1] + pixel[2]) / 3);
-			var red = pixel[0];
-			this.histogram[red]++;
-
-			this.allPixels.push(red);
-			this[ y < this.halfHeight ? 'topPixels' : 'bottomPixels' ].push(red);
-
+		this.forEachPixel(imgData, function(pixel, _, y){
+			var colorValue = App.averagePixel(pixel);
+			(y < halfHeight ? topPixels : bottomPixels).push(colorValue);
 		}, obj);
-
 
 		// Exibir resultados na interface
 		var result = this.html.result,
@@ -115,10 +100,10 @@ var App = {
 		var refLi = this._create('li', '<strong>Histograma da imagem:</strong>', list);
 		refLi.appendChild(this._getHistogramComponent(obj.histogram));
 
-		var topPixelsAvg = this._average(obj.topPixels);
+		var topPixelsAvg = this._average(topPixels);
 		this._create('li', `<strong>Média de cinza na metade superior da imagem:</strong> ${ topPixelsAvg.toFixed(2) }`, list);
 
-		var bottomPixelsMedian = this._median(obj.bottomPixels);
+		var bottomPixelsMedian = this._median(bottomPixels);
 		this._create('li', `<strong>Mediana de cinza na metade inferior da imagem:</strong> ${ bottomPixelsMedian.toFixed(2) }`, list);
 
 		var histogramMax = this._getHistogramMax(obj.histogram),
@@ -138,6 +123,61 @@ var App = {
 		result.innerHTML = '';
 		result.appendChild(fragment);
 	},
+
+	paintBlackBiggerAvg: function(){
+		var imgData = this.getPreviewImageData(),
+			obj = this.getImageDataInfo(imgData),
+			avg = this._average(obj.allPixels),
+			newImgData = this.previewContext.createImageData(imgData),
+			blackPixel = [0, 0, 0, 255];
+
+		this.forEachPixel(imgData, function(pixel, _, __, index){
+			var colorValue = this.averagePixel(pixel),
+				newPixel = colorValue >= avg ? blackPixel : pixel;
+
+			this.setPixel(newImgData, index, newPixel);
+		}, this);
+
+		var canvas = this._createCanvasFromImageData(newImgData);
+		this._replaceResultContent(canvas);
+	},
+
+	_createCanvasFromImageData: function(imgData){
+		var fragment = document.createDocumentFragment(),
+			canvas = this._create('canvas', null, fragment);
+
+		canvas.classList.add('active');
+		canvas.width = imgData.width;
+		canvas.height = imgData.height;
+		canvas.getContext('2d').putImageData(imgData, 0, 0);
+
+		return fragment;
+	},
+
+	_replaceResultContent: function(element){
+		this.html.result.innerHTML = '';
+		if(element)
+			this.html.result.appendChild(element);
+	},
+
+	getImageDataInfo: function(imgData){
+		var obj = {
+			histogram: new Array(256),
+			allPixels: []
+		};
+
+		for(var len = 256; len--;)
+			obj.histogram[len] = 0;
+
+		// Itera sobre todos os pixels, realizando as verificações necessárias
+		this.forEachPixel(imgData, function(pixel, x, y){
+			var colorValue = App.averagePixel(pixel);
+			this.histogram[colorValue]++;
+			this.allPixels.push(colorValue);
+		}, obj);
+
+		return obj;
+	},
 	
 	forEachPixel: function(imageData, callback, self){
 		var data = imageData.data,
@@ -149,9 +189,19 @@ var App = {
 			var offset = pixelLength * width * y;
 			for(var x = 0; x < width; x++){
 				var index = pixelLength * x + offset;
-				callback.call(self, data.slice(index, index + pixelLength), x, y);
+				callback.call(self, data.slice(index, index + pixelLength), x, y, index);
 			}
 		}
+	},
+
+	averagePixel: function(pixel){
+		return Math.round((pixel[0] + pixel[1] + pixel[2]) / 3);
+	},
+
+	setPixel: function(imgData, index, pixel){
+		// Replaces the pixel at the right index of the ImageData object
+		for(var data = imgData.data, len = pixel.length; len--;)
+			data[index + len] = pixel[len];
 	},
 
 	_create: function(str, content, parentNode){
@@ -208,5 +258,5 @@ var App = {
 
 		return fragment;
 	}
-	
+
 };
