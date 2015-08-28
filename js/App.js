@@ -112,13 +112,16 @@ var App = {
 		list.classList.add('featured-box');
 		fragment.appendChild(list);
 
+		var refLi = this._create('li', '<strong>Histograma da imagem:</strong>', list);
+		refLi.appendChild(this._getHistogramComponent(obj.histogram));
+
 		var topPixelsAvg = this._average(obj.topPixels);
 		this._create('li', `<strong>Média de cinza na metade superior da imagem:</strong> ${ topPixelsAvg.toFixed(2) }`, list);
 
 		var bottomPixelsMedian = this._median(obj.bottomPixels);
 		this._create('li', `<strong>Mediana de cinza na metade inferior da imagem:</strong> ${ bottomPixelsMedian.toFixed(2) }`, list);
 
-		var histogramMax = Math.max.apply(Math, obj.histogram),
+		var histogramMax = this._getHistogramMax(obj.histogram),
 			indexes = obj.histogram.reduce(function(arr, value, index){
 				if(value == histogramMax)
 					arr.push(index);
@@ -176,6 +179,34 @@ var App = {
 	_variance: function(arr){
 		var avg = this._average(arr);
 		return arr.length > 1 ? arr.reduce((a, b) => a + Math.pow(b - avg, 2)) / (arr.length - 1): 0;
+	},
+
+	_getHistogramMax: function(arr){
+		return Math.max.apply(Math, arr);
+	},
+
+	_getHistogramComponent: function(arr){
+		var fragment = document.createDocumentFragment(),
+			root = this._create('div', null, fragment),
+			max = Math.ceil(this._getHistogramMax(arr) * 1.15);
+
+		root.classList.add('histogram');
+		this._create('span', arr.length, root).classList.add('histogram-max-x');
+		this._create('span', '0', root).classList.add('histogram-min-x');
+		this._create('span', max, root).classList.add('histogram-max-y');
+		this._create('span', '0', root).classList.add('histogram-min-y');
+
+		arr.forEach(function(value, index){
+			var point = this._create('div', null, root),
+				percentageX = index / arr.length * 100,
+				percentageY = value / max * 100;
+
+			point.classList.add('histogram-point');
+			point.style.left = `${ percentageX.toFixed(4) }%`;
+			point.style.top = `${ (100 - percentageY).toFixed(4) }%`;
+		}, this);
+
+		return fragment;
 	}
 	
 };

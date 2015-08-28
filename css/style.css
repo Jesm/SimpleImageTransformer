@@ -67,3 +67,42 @@ canvas.active{
 	padding: 20px;
 	background: #FFF;
 }
+
+#content .histogram{
+	position: relative;
+	width: 512px;
+	height: 256px;
+	border: 1px solid #333;
+}
+#content .histogram span{
+	position: absolute;
+	z-index: 1;
+	padding: 5px;
+	font-size: 13px;
+	line-height: 1;
+	background: rgba(0, 0, 0, .5);
+	color: #FFF;
+	text-shadow: 0 0 4px #000;
+}
+#content .histogram .histogram-min-x, #content .histogram .histogram-max-x{
+	bottom: 0;
+}
+#content .histogram .histogram-min-x{
+	left: 0;	
+}
+#content .histogram .histogram-max-x{
+	right: 0;
+}
+#content .histogram .histogram-min-y{
+	display: none;
+}
+#content .histogram .histogram-max-y{
+	top: 0;
+	left: 0;
+}
+#content .histogram .histogram-point{
+	position: absolute;
+	bottom: 0;
+	width: 2px;
+	background: #333;
+}
