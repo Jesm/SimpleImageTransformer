@@ -45,6 +45,11 @@ ul{
 .img-loaded #sidebar .operations{
 	display: block;
 }
+#sidebar .operations button{
+	display: block;
+	margin: 5px auto;
+	width: 100%;
+}
 
 #image-info{
 	margin-top: 20px;
