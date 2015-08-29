@@ -73,10 +73,11 @@ var App = {
 	execute: function(str){
 		var methods = {
 			display_info: 'displayInfo',
-			bigger_avg_black: 'paintBlackBiggerAvg',
-			bigger_mode_150: 'paint150BiggerMode',
-			bigger_median_white: 'paintWhiteBiggerMedian',
+			greater_avg_black: 'paintBlackGreaterAvg',
+			greater_mode_150: 'paint150GreaterMode',
+			greater_median_white: 'paintWhiteGreaterMedian',
 			lesser_avg_100: 'paint100LesserAvg',
+			lesser_median_255_lesser_0: 'paint255GreaterMedian0LesserAvg'
 		};
 		
 		this[methods[str]]();
@@ -123,7 +124,7 @@ var App = {
 		result.appendChild(fragment);
 	},
 
-	paintBlackBiggerAvg: function(){
+	paintBlackGreaterAvg: function(){
 		var imgData = this.getPreviewImageData(),
 			obj = this.getImageDataInfo(imgData),
 			avg = this._average(obj.allPixels),
@@ -141,7 +142,7 @@ var App = {
 		this._replaceResultContent(canvas);
 	},
 
-	paint150BiggerMode: function(){
+	paint150GreaterMode: function(){
 		var imgData = this.getPreviewImageData(),
 			obj = this.getImageDataInfo(imgData),
 			mode = this._getModesFromHistogram(obj.histogram)[0],
@@ -159,7 +160,7 @@ var App = {
 		this._replaceResultContent(canvas);
 	},
 
-	paintWhiteBiggerMedian: function(){
+	paintWhiteGreaterMedian: function(){
 		var imgData = this.getPreviewImageData(),
 			obj = this.getImageDataInfo(imgData),
 			median = this._median(obj.allPixels),
@@ -187,6 +188,26 @@ var App = {
 		this.forEachPixel(imgData, function(pixel, _, __, index){
 			var colorValue = this.averagePixel(pixel),
 				newPixel = colorValue < avg ? pixel100 : pixel;
+
+			this.setPixel(newImgData, index, newPixel);
+		}, this);
+
+		var canvas = this._createCanvasFromImageData(newImgData);
+		this._replaceResultContent(canvas);
+	},
+
+	paint255GreaterMedian0LesserAvg: function(){
+		var imgData = this.getPreviewImageData(),
+			obj = this.getImageDataInfo(imgData),
+			median = this._median(obj.allPixels),
+			avg = this._average(obj.allPixels),
+			newImgData = this.previewContext.createImageData(imgData),
+			pixel255 = [255, 255, 255, 255],
+			pixel0 = [0, 0, 0, 255];
+
+		this.forEachPixel(imgData, function(pixel, _, __, index){
+			var colorValue = this.averagePixel(pixel),
+				newPixel = colorValue >= median ? pixel255 : colorValue < avg ? pixel0 : pixel;
 
 			this.setPixel(newImgData, index, newPixel);
 		}, this);
