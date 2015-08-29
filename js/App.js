@@ -107,18 +107,18 @@ var App = {
 		refLi.appendChild(this._getHistogramComponent(obj.histogram));
 
 		var topPixelsAvg = this._average(topPixels);
-		this._create('li', `<strong>Média de cinza na metade superior da imagem:</strong> ${ topPixelsAvg.toFixed(2) }`, list);
+		this._create('li', '<strong>Média de cinza na metade superior da imagem:</strong> ' + topPixelsAvg.toFixed(2), list);
 
 		var bottomPixelsMedian = this._median(bottomPixels);
-		this._create('li', `<strong>Mediana de cinza na metade inferior da imagem:</strong> ${ bottomPixelsMedian.toFixed(2) }`, list);
+		this._create('li', '<strong>Mediana de cinza na metade inferior da imagem:</strong> ' + bottomPixelsMedian.toFixed(2), list);
 
 		var modes = this._getModesFromHistogram(obj.histogram),
-			tmpStr = `<strong>Moda de cinza em toda a imagem:</strong> ${ modes.join(', ') }`;
-		tmpStr += ` (${ obj.histogram[modes[0]] } aparições)`;
+			tmpStr = '<strong>Moda de cinza em toda a imagem:</strong> ' + modes.join(', ');
+		tmpStr += ' (' + obj.histogram[modes[0]] + ' aparições)';
 		this._create('li', tmpStr, list);
 
 		var variance = this._variance(obj.allPixels);
-		this._create('li', `<strong>Variância de cinza em toda a imagem:</strong> ${ variance.toFixed(2) }`, list);
+		this._create('li', '<strong>Variância de cinza em toda a imagem:</strong> ' + variance.toFixed(2), list);
 
 		result.innerHTML = '';
 		result.appendChild(fragment);
@@ -344,8 +344,8 @@ var App = {
 				percentageY = value / max * 100;
 
 			point.classList.add('histogram-point');
-			point.style.left = `${ percentageX.toFixed(4) }%`;
-			point.style.top = `${ (100 - percentageY).toFixed(4) }%`;
+			point.style.left = percentageX.toFixed(4) + '%';
+			point.style.top = (100 - percentageY).toFixed(4) + '%';
 		}, this);
 
 		return fragment;
