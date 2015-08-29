@@ -263,7 +263,7 @@ var App = {
 			var offset = pixelLength * width * y;
 			for(var x = 0; x < width; x++){
 				var index = pixelLength * x + offset;
-				callback.call(self, data.slice(index, index + pixelLength), x, y, index);
+				callback.call(self, data.subarray(index, index + pixelLength), x, y, index);
 			}
 		}
 	},
@@ -291,7 +291,10 @@ var App = {
 	},
 
 	_average: function(arr){
-		return arr.length ? arr.reduce((a, b) => a + b) / arr.length : 0;
+		function adder(a, b){
+			return a + b;
+		};
+		return arr.length ? arr.reduce(adder) / arr.length : 0;
 	},
 
 	_median: function(arr){
@@ -301,8 +304,11 @@ var App = {
 	},
 
 	_variance: function(arr){
+		function varianceAdder(a, b){
+			return a + Math.pow(b - avg, 2);
+		}
 		var avg = this._average(arr);
-		return arr.length > 1 ? arr.reduce((a, b) => a + Math.pow(b - avg, 2)) / (arr.length - 1): 0;
+		return arr.length > 1 ? arr.reduce(varianceAdder) / (arr.length - 1): 0;
 	},
 
 	_getHistogramMax: function(arr){
