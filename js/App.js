@@ -76,6 +76,7 @@ var App = {
 			bigger_avg_black: 'paintBlackBiggerAvg',
 			bigger_mode_150: 'paint150BiggerMode',
 			bigger_median_white: 'paintWhiteBiggerMedian',
+			lesser_avg_100: 'paint100LesserAvg',
 		};
 		
 		this[methods[str]]();
@@ -168,6 +169,24 @@ var App = {
 		this.forEachPixel(imgData, function(pixel, _, __, index){
 			var colorValue = this.averagePixel(pixel),
 				newPixel = colorValue >= median ? whitePixel : pixel;
+
+			this.setPixel(newImgData, index, newPixel);
+		}, this);
+
+		var canvas = this._createCanvasFromImageData(newImgData);
+		this._replaceResultContent(canvas);
+	},
+
+	paint100LesserAvg: function(){
+		var imgData = this.getPreviewImageData(),
+			obj = this.getImageDataInfo(imgData),
+			avg = this._average(obj.allPixels),
+			newImgData = this.previewContext.createImageData(imgData),
+			pixel100 = [100, 100, 100, 255];
+
+		this.forEachPixel(imgData, function(pixel, _, __, index){
+			var colorValue = this.averagePixel(pixel),
+				newPixel = colorValue < avg ? pixel100 : pixel;
 
 			this.setPixel(newImgData, index, newPixel);
 		}, this);
