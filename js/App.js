@@ -78,7 +78,8 @@ var App = {
 			greater_median_white: 'paintWhiteGreaterMedian',
 			lesser_avg_100: 'paint100LesserAvg',
 			lesser_median_255_lesser_0: 'paint255GreaterMedian0LesserAvg',
-			enlarge_2x: 'enlarge2x'
+			enlarge_2x: 'enlarge2x',
+			decrease_2x: 'decrease2x'
 		};
 		
 		this[methods[str]]();
@@ -220,6 +221,13 @@ var App = {
 	enlarge2x: function(){
 		var imgData = this.getPreviewImageData(),
 			newImgData = this._resizedImageData(imgData, 2),
+			canvas = this._createCanvasFromImageData(newImgData);
+		this._replaceResultContent(canvas);
+	},
+
+	decrease2x: function(){
+		var imgData = this.getPreviewImageData(),
+			newImgData = this._resizedImageData(imgData, .5),
 			canvas = this._createCanvasFromImageData(newImgData);
 		this._replaceResultContent(canvas);
 	},
