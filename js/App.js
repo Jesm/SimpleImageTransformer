@@ -77,7 +77,8 @@ var App = {
 			greater_mode_150: 'paint150GreaterMode',
 			greater_median_white: 'paintWhiteGreaterMedian',
 			lesser_avg_100: 'paint100LesserAvg',
-			lesser_median_255_lesser_0: 'paint255GreaterMedian0LesserAvg'
+			lesser_median_255_lesser_0: 'paint255GreaterMedian0LesserAvg',
+			enlarge_2x: 'enlarge2x'
 		};
 		
 		this[methods[str]]();
@@ -216,6 +217,13 @@ var App = {
 		this._replaceResultContent(canvas);
 	},
 
+	enlarge2x: function(){
+		var imgData = this.getPreviewImageData(),
+			newImgData = this._resizedImageData(imgData, 2),
+			canvas = this._createCanvasFromImageData(newImgData);
+		this._replaceResultContent(canvas);
+	},
+
 	_createCanvasFromImageData: function(imgData){
 		var fragment = document.createDocumentFragment(),
 			canvas = this._create('canvas', null, fragment);
@@ -276,6 +284,24 @@ var App = {
 		// Replaces the pixel at the right index of the ImageData object
 		for(var data = imgData.data, len = pixel.length; len--;)
 			data[index + len] = pixel[len];
+	},
+
+	_resizedImageData: function(imgData, num){
+		var newImgData = this.previewContext.createImageData(imgData.width * num, imgData.height * num),
+			countNum = Math.ceil(num),
+			powCountNum = Math.pow(countNum, 2);
+
+		this.forEachPixel(imgData, function(pixel, x, y){
+			var localCountNum = countNum, len = powCountNum; // Replicate variables in this escope
+			for(var x = Math.floor(num * x), y = Math.floor(num * y), counter = 0; counter < len; counter++)
+				this.setPixelAt(newImgData, x + (counter % localCountNum), y + Math.floor(counter / localCountNum), pixel);
+		}, this);
+
+		return newImgData;
+	},
+
+	setPixelAt: function(imgData, x, y, pixel){
+		this.setPixel(imgData, pixel.length * (y * imgData.width + x), pixel);
 	},
 
 	_create: function(str, content, parentNode){
