@@ -130,7 +130,8 @@ var App = {
 			lesser_median_255_lesser_0: 'paint255GreaterMedian0LesserAvg',
 			enlarge_2x: 'enlarge2x',
 			decrease_2x: 'decrease2x',
-			rotate_90_anticlockwise: 'rotate90Anticlockwise'
+			rotate_90_anticlockwise: 'rotate90Anticlockwise',
+			rotate_90_clockwise: 'rotate90Clockwise'
 		};
 		
 		this[methods[str]]();
@@ -298,6 +299,13 @@ var App = {
 	rotate90Anticlockwise: function(){
 		var imgData = this.getPreviewImageData(),
 			newImgData = this._rotatedImageData(imgData, -90),
+			canvas = this._createCanvasFromImageData(newImgData);
+		this._replaceResultContent(canvas);
+	},
+	
+	rotate90Clockwise: function(){
+		var imgData = this.getPreviewImageData(),
+			newImgData = this._rotatedImageData(imgData, 90),
 			canvas = this._createCanvasFromImageData(newImgData);
 		this._replaceResultContent(canvas);
 	},

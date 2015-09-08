@@ -35,9 +35,6 @@ ul{
 #sidebar h2:first-child{
 	margin-top: 0;
 }
-#sidebar h3{
-	margin: 15px auto 0;
-}
 #sidebar ul{
 	padding: 0;
 }
@@ -47,6 +44,32 @@ ul{
 }
 .img-loaded #sidebar .operations{
 	display: block;
+}
+#sidebar .operations section{
+	margin: 15px auto 0;
+}
+#sidebar .operations section:target{
+	border: 1px solid royalblue;
+}
+#sidebar .operations section h3 a{
+	display: block;
+	padding: 5px;
+	color: royalblue;
+	text-decoration: none;
+}
+#sidebar .operations section:target h3 a, #sidebar .operations section:target h3 a:hover{
+	background: royalblue;
+	color: #FFF;
+}
+#sidebar .operations section h3 a:hover{
+	background: #CCC;
+}
+#sidebar .operations section .inner{
+	display: none;
+}
+#sidebar .operations section:target .inner{
+	display: block;
+	padding: 5px;
 }
 #sidebar .operations button{
 	display: block;
