@@ -1,7 +1,9 @@
 'use strict';
 
 var App = {
-
+	
+	// Métodos de interface
+	
 	init: function(args){
 		this.loadedImage = false;
 		this.html = {
@@ -43,10 +45,6 @@ var App = {
 			img.src = URL.createObjectURL(file);
 		}
 	},
-
-	_buttonClick: function(){
-		App.execute(this.dataset.action);
-	},
 	
 	loadPreviewImage: function(image){
 		var preview = this.html.preview;
@@ -61,15 +59,67 @@ var App = {
 		document.body.classList.add('img-loaded');
 		this.html.result.innerHTML = '';
 	},
+
+	_buttonClick: function(){
+		App.execute(this.dataset.action);
+	},
 	
-	getPreviewImageData: function(){
-		if(!this.loadedImage)
-			throw "No image was uploaded!";
-		
-		var prev = this.html.preview;
-		return this.previewContext.getImageData(0, 0, prev.width, prev.height);
+	_replaceResultContent: function(element){
+		this.html.result.innerHTML = '';
+		if(element)
+			this.html.result.appendChild(element);
+	},
+	
+	_create: function(str, content, parentNode){
+		var element = document.createElement(str);
+
+		if(content)
+			element.innerHTML = content;
+
+		if(parentNode)
+			parentNode.appendChild(element);
+
+		return element;
+	},
+	
+	_getHistogramComponent: function(arr){
+		var fragment = document.createDocumentFragment(),
+			root = this._create('div', null, fragment),
+			max = Math.ceil(this._getHistogramMax(arr) * 1.15);
+
+		root.classList.add('histogram');
+		this._create('span', arr.length - 1, root).classList.add('histogram-max-x');
+		this._create('span', '0', root).classList.add('histogram-min-x');
+		this._create('span', max, root).classList.add('histogram-max-y');
+		this._create('span', '0', root).classList.add('histogram-min-y');
+
+		arr.forEach(function(value, index){
+			var point = this._create('div', null, root),
+				percentageX = index / arr.length * 100,
+				percentageY = value / max * 100;
+
+			point.classList.add('histogram-point');
+			point.style.left = percentageX.toFixed(4) + '%';
+			point.style.top = (100 - percentageY).toFixed(4) + '%';
+		}, this);
+
+		return fragment;
+	},
+	
+	_createCanvasFromImageData: function(imgData){
+		var fragment = document.createDocumentFragment(),
+			canvas = this._create('canvas', null, fragment);
+
+		canvas.classList.add('active');
+		canvas.width = imgData.width;
+		canvas.height = imgData.height;
+		canvas.getContext('2d').putImageData(imgData, 0, 0);
+
+		return fragment;
 	},
 
+	// Métodos da aplicação
+	
 	execute: function(str){
 		var methods = {
 			display_info: 'displayInfo',
@@ -77,7 +127,8 @@ var App = {
 			greater_mode_150: 'paint150GreaterMode',
 			greater_median_white: 'paintWhiteGreaterMedian',
 			lesser_avg_100: 'paint100LesserAvg',
-			lesser_median_255_lesser_0: 'paint255GreaterMedian0LesserAvg'
+			lesser_median_255_lesser_0: 'paint255GreaterMedian0LesserAvg',
+			rotate_90_anticlockwise: 'rotate90Anticlockwise'
 		};
 		
 		this[methods[str]]();
@@ -215,23 +266,22 @@ var App = {
 		var canvas = this._createCanvasFromImageData(newImgData);
 		this._replaceResultContent(canvas);
 	},
-
-	_createCanvasFromImageData: function(imgData){
-		var fragment = document.createDocumentFragment(),
-			canvas = this._create('canvas', null, fragment);
-
-		canvas.classList.add('active');
-		canvas.width = imgData.width;
-		canvas.height = imgData.height;
-		canvas.getContext('2d').putImageData(imgData, 0, 0);
-
-		return fragment;
+	
+	rotate90Anticlockwise: function(){
+		var imgData = this.getPreviewImageData(),
+			newImgData = this._rotateImageData(imgData, -90),
+			canvas = this._createCanvasFromImageData(newImgData);
+		this._replaceResultContent(canvas);
 	},
-
-	_replaceResultContent: function(element){
-		this.html.result.innerHTML = '';
-		if(element)
-			this.html.result.appendChild(element);
+	
+	// Métodos de interação com objetos ImageData
+	
+	getPreviewImageData: function(){
+		if(!this.loadedImage)
+			throw "No image was uploaded!";
+		
+		var prev = this.html.preview;
+		return this.previewContext.getImageData(0, 0, prev.width, prev.height);
 	},
 
 	getImageDataInfo: function(imgData){
@@ -277,18 +327,68 @@ var App = {
 		for(var data = imgData.data, len = pixel.length; len--;)
 			data[index + len] = pixel[len];
 	},
-
-	_create: function(str, content, parentNode){
-		var element = document.createElement(str);
-
-		if(content)
-			element.innerHTML = content;
-
-		if(parentNode)
-			parentNode.appendChild(element);
-
-		return element;
+	
+	isLocatedInside: function(imgData, x, y){
+		for(var props = ['width', 'height'], values = [x, y], len = props.length; len--;){
+			var half = Math.floor(imgData[props[len]] / 2);
+			if(Math.abs(values[len] - half) > half)
+				return false;
+		}
+		
+		return true;
 	},
+	
+	forEachPixelRealocate: function(imgDataSrc, imgDataDst, callback, self){
+		var data = imgDataSrc.data,
+			width = imgDataSrc.width,
+			height = imgDataSrc.height,
+			pixelLength = 4;
+
+		for(var y = 0, offset = 0; y < height; y++){
+			for(var x = 0; x < width; x++, offset += pixelLength){
+				var obj = callback.call(self, x, y);
+				if(obj)
+					this.setPixelAtIndex(imgDataDst, obj.x, obj.y, data.subarray(offset, offset + pixelLength));
+			}
+		}
+	},
+	
+	setPixelAtIndex: function(imgData, x, y, pixel){
+		var data = imgData.data, offset = (y * imgData.width + x) * pixel.length;
+		for(var len = pixel.length; len--;)
+			data[offset + len] = pixel[len];
+	},
+
+	_rotateImageData: function(imgData, degree){
+		var newImgData = this.previewContext.createImageData(imgData),
+			radians = degree / 180 * Math.PI,
+			sin = Math.sin(radians),
+			cos = Math.cos(radians),
+			centerX = Math.floor(imgData.width / 2),
+			centerY = Math.floor(imgData.height / 2),
+			newCenterX = Math.floor(newImgData.width / 2),
+			newCenterY = Math.floor(newImgData.height / 2);
+
+		this.forEachPixelRealocate(imgData, newImgData, function(x, y){
+			var diffX = x - centerX,
+				diffY = y - centerY;
+
+			x = newCenterX + diffX * cos - diffY * sin;
+			y = newCenterY + diffX * sin + diffY * cos;
+
+			if(!this.isLocatedInside(newImgData, x, y))
+				return null;
+
+			return {
+				x: Math.round(x),
+				y: Math.round(y)
+			};
+		}, this);
+
+		return newImgData;
+	},
+	
+	// Métodos com operações matemáticas
 
 	_average: function(arr){
 		function adder(a, b){
@@ -325,30 +425,6 @@ var App = {
 			}, []);
 
 		return indexes;
-	},
-
-	_getHistogramComponent: function(arr){
-		var fragment = document.createDocumentFragment(),
-			root = this._create('div', null, fragment),
-			max = Math.ceil(this._getHistogramMax(arr) * 1.15);
-
-		root.classList.add('histogram');
-		this._create('span', arr.length - 1, root).classList.add('histogram-max-x');
-		this._create('span', '0', root).classList.add('histogram-min-x');
-		this._create('span', max, root).classList.add('histogram-max-y');
-		this._create('span', '0', root).classList.add('histogram-min-y');
-
-		arr.forEach(function(value, index){
-			var point = this._create('div', null, root),
-				percentageX = index / arr.length * 100,
-				percentageY = value / max * 100;
-
-			point.classList.add('histogram-point');
-			point.style.left = percentageX.toFixed(4) + '%';
-			point.style.top = (100 - percentageY).toFixed(4) + '%';
-		}, this);
-
-		return fragment;
 	}
 
 };

@@ -35,6 +35,9 @@ ul{
 #sidebar h2:first-child{
 	margin-top: 0;
 }
+#sidebar h3{
+	margin: 15px auto 0;
+}
 #sidebar ul{
 	padding: 0;
 }
