@@ -128,6 +128,8 @@ var App = {
 			greater_median_white: 'paintWhiteGreaterMedian',
 			lesser_avg_100: 'paint100LesserAvg',
 			lesser_median_255_lesser_0: 'paint255GreaterMedian0LesserAvg',
+			enlarge_2x: 'enlarge2x',
+			decrease_2x: 'decrease2x',
 			rotate_90_anticlockwise: 'rotate90Anticlockwise'
 		};
 		
@@ -266,10 +268,36 @@ var App = {
 		var canvas = this._createCanvasFromImageData(newImgData);
 		this._replaceResultContent(canvas);
 	},
+
+	enlarge2x: function(){
+		var imgData = this.getPreviewImageData(),
+			newImgData = this._resizedImageData(imgData, 2),
+			canvas = this._createCanvasFromImageData(newImgData);
+		this._replaceResultContent(canvas);
+	},
+
+	decrease2x: function(){
+		var imgData = this.getPreviewImageData(),
+			newImgData = this._resizedImageData(imgData, .5),
+			canvas = this._createCanvasFromImageData(newImgData);
+		this._replaceResultContent(canvas);
+	},
+
+	_createCanvasFromImageData: function(imgData){
+		var fragment = document.createDocumentFragment(),
+			canvas = this._create('canvas', null, fragment);
+
+		canvas.classList.add('active');
+		canvas.width = imgData.width;
+		canvas.height = imgData.height;
+		canvas.getContext('2d').putImageData(imgData, 0, 0);
+
+		return fragment;
+	},
 	
 	rotate90Anticlockwise: function(){
 		var imgData = this.getPreviewImageData(),
-			newImgData = this._rotateImageData(imgData, -90),
+			newImgData = this._rotatedImageData(imgData, -90),
 			canvas = this._createCanvasFromImageData(newImgData);
 		this._replaceResultContent(canvas);
 	},
@@ -309,12 +337,9 @@ var App = {
 			height = imageData.height,
 			pixelLength = 4;
 
-		for(var y = 0; y < height; y++){
-			var offset = pixelLength * width * y;
-			for(var x = 0; x < width; x++){
-				var index = pixelLength * x + offset;
-				callback.call(self, data.subarray(index, index + pixelLength), x, y, index);
-			}
+		for(var offset = 0, y = 0; y < height; y++){
+			for(var x = 0; x < width; x++, offset += pixelLength)
+				callback.call(self, data.subarray(offset, offset + pixelLength), x, y, offset);
 		}
 	},
 
@@ -326,6 +351,10 @@ var App = {
 		// Replaces the pixel at the right index of the ImageData object
 		for(var data = imgData.data, len = pixel.length; len--;)
 			data[index + len] = pixel[len];
+	},
+
+	setPixelAt: function(imgData, x, y, pixel){
+		this.setPixel(imgData, pixel.length * (y * imgData.width + x), pixel);
 	},
 	
 	isLocatedInside: function(imgData, x, y){
@@ -348,18 +377,26 @@ var App = {
 			for(var x = 0; x < width; x++, offset += pixelLength){
 				var obj = callback.call(self, x, y);
 				if(obj)
-					this.setPixelAtIndex(imgDataDst, obj.x, obj.y, data.subarray(offset, offset + pixelLength));
+					this.setPixelAt(imgDataDst, obj.x, obj.y, data.subarray(offset, offset + pixelLength));
 			}
 		}
 	},
-	
-	setPixelAtIndex: function(imgData, x, y, pixel){
-		var data = imgData.data, offset = (y * imgData.width + x) * pixel.length;
-		for(var len = pixel.length; len--;)
-			data[offset + len] = pixel[len];
+
+	_resizedImageData: function(imgData, num){
+		var newImgData = this.previewContext.createImageData(imgData.width * num, imgData.height * num),
+			countNum = Math.ceil(num),
+			powCountNum = Math.pow(countNum, 2);
+
+		this.forEachPixel(imgData, function(pixel, x, y){
+			var localCountNum = countNum, len = powCountNum; // Replicate variables in this escope
+			for(var x = Math.floor(num * x), y = Math.floor(num * y), counter = 0; counter < len; counter++)
+				this.setPixelAt(newImgData, x + (counter % localCountNum), y + Math.floor(counter / localCountNum), pixel);
+		}, this);
+
+		return newImgData;
 	},
 
-	_rotateImageData: function(imgData, degree){
+	_rotatedImageData: function(imgData, degree){
 		var newImgData = this.previewContext.createImageData(imgData),
 			radians = degree / 180 * Math.PI,
 			sin = Math.sin(radians),
