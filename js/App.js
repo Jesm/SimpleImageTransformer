@@ -132,7 +132,8 @@ var App = {
 			decrease_2x: 'decrease2x',
 			rotate_90_anticlockwise: 'rotate90Anticlockwise',
 			rotate_90_clockwise: 'rotate90Clockwise',
-			mirror_horizontally: 'mirrorHorizontally'
+			mirror_horizontally: 'mirrorHorizontally',
+			mirror_vertically: 'mirrorVertically'
 		};
 		
 		this[methods[str]]();
@@ -320,6 +321,22 @@ var App = {
 			return {
 				x: width - x,
 				y: y
+			};
+		}, this);
+
+		var canvas = this._createCanvasFromImageData(newImgData);
+		this._replaceResultContent(canvas);
+	},
+	
+	mirrorVertically: function(){
+		var imgData = this.getPreviewImageData(),
+			newImgData = this._rotatedImageData(imgData),
+			height = imgData.height - 1;
+
+		this.forEachPixelRealocate(imgData, newImgData, function(x, y){
+			return {
+				x: x,
+				y: height - y,
 			};
 		}, this);
 
