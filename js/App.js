@@ -133,7 +133,8 @@ var App = {
 			rotate_90_anticlockwise: 'rotate90Anticlockwise',
 			rotate_90_clockwise: 'rotate90Clockwise',
 			mirror_horizontally: 'mirrorHorizontally',
-			mirror_vertically: 'mirrorVertically'
+			mirror_vertically: 'mirrorVertically',
+			translate_50: 'translate50'
 		};
 		
 		this[methods[str]]();
@@ -285,18 +286,6 @@ var App = {
 			canvas = this._createCanvasFromImageData(newImgData);
 		this._replaceResultContent(canvas);
 	},
-
-	_createCanvasFromImageData: function(imgData){
-		var fragment = document.createDocumentFragment(),
-			canvas = this._create('canvas', null, fragment);
-
-		canvas.classList.add('active');
-		canvas.width = imgData.width;
-		canvas.height = imgData.height;
-		canvas.getContext('2d').putImageData(imgData, 0, 0);
-
-		return fragment;
-	},
 	
 	rotate90Anticlockwise: function(){
 		var imgData = this.getPreviewImageData(),
@@ -314,7 +303,7 @@ var App = {
 	
 	mirrorHorizontally: function(){
 		var imgData = this.getPreviewImageData(),
-			newImgData = this._rotatedImageData(imgData),
+			newImgData = this.previewContext.createImageData(imgData),
 			width = imgData.width - 1;
 
 		this.forEachPixelRealocate(imgData, newImgData, function(x, y){
@@ -330,13 +319,29 @@ var App = {
 	
 	mirrorVertically: function(){
 		var imgData = this.getPreviewImageData(),
-			newImgData = this._rotatedImageData(imgData),
+			newImgData = this.previewContext.createImageData(imgData),
 			height = imgData.height - 1;
 
 		this.forEachPixelRealocate(imgData, newImgData, function(x, y){
 			return {
 				x: x,
 				y: height - y,
+			};
+		}, this);
+
+		var canvas = this._createCanvasFromImageData(newImgData);
+		this._replaceResultContent(canvas);
+	},
+	
+	translate50: function(){
+		var size = 50,
+			imgData = this.getPreviewImageData(),
+			newImgData = this.previewContext.createImageData(imgData.width + 2 * size, imgData.height + 2 * size);
+
+		this.forEachPixelRealocate(imgData, newImgData, function(x, y){
+			return {
+				x: x + size,
+				y: y + size,
 			};
 		}, this);
 
