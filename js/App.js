@@ -444,10 +444,12 @@ var App = {
 	},
 
 	_rotatedImageData: function(imgData, degree){
-		var newImgData = this.previewContext.createImageData(imgData),
-			radians = degree / 180 * Math.PI,
+		var radians = degree / 180 * Math.PI,
 			sin = Math.sin(radians),
 			cos = Math.cos(radians),
+			newWidth = imgData.width * Math.abs(cos) + imgData.height * Math.abs(sin),
+			newHeight = imgData.width * Math.abs(sin) + imgData.height * Math.abs(cos),
+			newImgData = this.previewContext.createImageData(newWidth, newHeight),
 			centerX = Math.floor(imgData.width / 2),
 			centerY = Math.floor(imgData.height / 2),
 			newCenterX = Math.floor(newImgData.width / 2),
