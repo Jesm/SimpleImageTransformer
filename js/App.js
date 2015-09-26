@@ -12,7 +12,12 @@ var App = {
 		
 		var buttons = args.sidebar.getElementsByTagName('button');
 		[].slice.call(buttons).forEach(function(btn){
-			btn.addEventListener('click', this._buttonClick);
+			btn.addEventListener('click', this._commandCall);
+		}, this);
+
+		var inputs = args.sidebar.querySelectorAll('input[type="range"]');
+		[].slice.call(inputs).forEach(function(element){
+			element.addEventListener('change', this._commandCall);
 		}, this);
 		
 		this.html.input.addEventListener('change', this._uploadFile);
@@ -60,8 +65,8 @@ var App = {
 		this.html.result.innerHTML = '';
 	},
 
-	_buttonClick: function(){
-		App.execute(this.dataset.action);
+	_commandCall: function(ev){
+		App.execute(this.dataset.action, this.value, ev);
 	},
 	
 	_replaceResultContent: function(element){
@@ -120,7 +125,7 @@ var App = {
 
 	// Métodos da aplicação
 	
-	execute: function(str){
+	execute: function(str, value, ev){
 		var methods = {
 			display_info: 'displayInfo',
 			greater_avg_black: 'paintBlackGreaterAvg',
@@ -134,10 +139,11 @@ var App = {
 			rotate_90_clockwise: 'rotate90Clockwise',
 			mirror_horizontally: 'mirrorHorizontally',
 			mirror_vertically: 'mirrorVertically',
-			translate_50: 'translate50'
+			translate_50: 'translate50',
+			custom_thresholding: 'customThreesholding'
 		};
 		
-		this[methods[str]]();
+		this[methods[str]](value, ev);
 	},
 	
 	displayInfo: function(){
@@ -349,6 +355,27 @@ var App = {
 		this._replaceResultContent(canvas);
 	},
 	
+	customThreesholding: function(value){
+		var value = Math.round(+value);
+		if(value < 0 || value > 255)
+			return alert('A valor deve estar no intervalo [0, 255]!');
+		
+		var imgData = this.getPreviewImageData(),
+			newImgData = this.previewContext.createImageData(imgData),
+			whitePixel = [255, 255, 255, 255],
+			blackPixel = [0, 0, 0, 255];
+
+		this.forEachPixel(imgData, function(pixel, _, __, index){
+			var colorValue = this.pixelToGrayscale(pixel),
+				newPixel = colorValue >= value ? whitePixel : blackPixel;
+
+			this.setPixel(newImgData, index, newPixel);
+		}, this);
+
+		var canvas = this._createCanvasFromImageData(newImgData);
+		this._replaceResultContent(canvas);
+	},
+	
 	// Métodos de interação com objetos ImageData
 	
 	getPreviewImageData: function(){
@@ -394,6 +421,10 @@ var App = {
 		return Math.round((pixel[0] + pixel[1] + pixel[2]) / 3);
 	},
 
+	pixelToGrayscale: function(pixel){
+		return Math.round(pixel[0] * .2126 + pixel[1] * .7152 + pixel[2] * .0722);
+	},
+	
 	setPixel: function(imgData, index, pixel){
 		// Replaces the pixel at the right index of the ImageData object
 		for(var data = imgData.data, len = pixel.length; len--;)

@@ -76,6 +76,18 @@ ul{
 	margin: 5px auto;
 	width: 100%;
 }
+#sidebar .operations label span, #sidebar .operations label input{
+	vertical-align: middle;
+}
+#sidebar .operations label .labeled-range{
+	margin-left: 10px;
+	font-size: 14px;
+	line-height: 21px;
+	color: #666;
+}
+#sidebar .operations label .labeled-range input{
+	width: 135px;
+}
 
 #image-info{
 	margin-top: 20px;

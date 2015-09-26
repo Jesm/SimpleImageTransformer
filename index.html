@@ -38,6 +38,21 @@
 						<button data-action="translate_50">Transladar 50px horizontal e verticalmente</button>
 					</div>
 				</section>
+				
+				<section id="exercise-3">
+					<h3><a href="#exercise-3">Atividade 3</a></h3>
+					<div class="inner">
+						<label>
+							<span>Limiarizar imagem</span>
+							<span class="labeled-range">
+								<span>0</span>
+								<input type="range" min="0" max="255" data-action="custom_thresholding" onchange="document.getElementById('labeled-range-value').textContent = this.value + '/'">
+								<span id="labeled-range-value"></span>
+								<span>255</span>
+							</span>
+						</label>
+					</div>
+				</section>
 			</div>
 		</section>
 
