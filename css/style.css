@@ -71,7 +71,7 @@ ul{
 	display: block;
 	padding: 5px;
 }
-#sidebar .operations button{
+#sidebar .operations button, #sidebar .operations label{
 	display: block;
 	margin: 5px auto;
 	width: 100%;

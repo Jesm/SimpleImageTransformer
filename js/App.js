@@ -140,7 +140,8 @@ var App = {
 			mirror_horizontally: 'mirrorHorizontally',
 			mirror_vertically: 'mirrorVertically',
 			translate_50: 'translate50',
-			custom_thresholding: 'customThreesholding'
+			custom_thresholding: 'customThreesholding',
+			median_filter: 'medianFilter'
 		};
 		
 		this[methods[str]](value, ev);
@@ -331,7 +332,7 @@ var App = {
 		this.forEachPixelRealocate(imgData, newImgData, function(x, y){
 			return {
 				x: x,
-				y: height - y,
+				y: height - y
 			};
 		}, this);
 
@@ -347,7 +348,7 @@ var App = {
 		this.forEachPixelRealocate(imgData, newImgData, function(x, y){
 			return {
 				x: x + size,
-				y: y + size,
+				y: y + size
 			};
 		}, this);
 
@@ -358,7 +359,7 @@ var App = {
 	customThreesholding: function(value){
 		var value = Math.round(+value);
 		if(value < 0 || value > 255)
-			return alert('A valor deve estar no intervalo [0, 255]!');
+			return alert('O valor deve estar no intervalo [0, 255]!');
 		
 		var imgData = this.getPreviewImageData(),
 			newImgData = this.previewContext.createImageData(imgData),
@@ -371,6 +372,25 @@ var App = {
 
 			this.setPixel(newImgData, index, newPixel);
 		}, this);
+
+		var canvas = this._createCanvasFromImageData(newImgData);
+		this._replaceResultContent(canvas);
+	},
+	
+	medianFilter: function(){
+		var imgData = this.getPreviewImageData();
+
+		var newImgData = this._applyConvolution(imgData, 3, function(matrix){
+			var arr = [];
+			for(var x = 0, len = matrix.length; x < len; x++){
+				for(var y = 0; y < len; y++)
+					arr[x * len + y] = matrix[x][y][0];
+			}
+
+			var median = Math.round(this._average(arr));
+			debugger
+			return [median, median, median, 255];
+		});
 
 		var canvas = this._createCanvasFromImageData(newImgData);
 		this._replaceResultContent(canvas);
@@ -466,7 +486,7 @@ var App = {
 			powCountNum = Math.pow(countNum, 2);
 
 		this.forEachPixel(imgData, function(pixel, x, y){
-			var localCountNum = countNum, len = powCountNum; // Replicate variables in this escope
+			var localCountNum = countNum, len = powCountNum; // Replicate variables in this scope
 			for(var x = Math.floor(num * x), y = Math.floor(num * y), counter = 0; counter < len; counter++)
 				this.setPixelAt(newImgData, x + (counter % localCountNum), y + Math.floor(counter / localCountNum), pixel);
 		}, this);
@@ -502,6 +522,64 @@ var App = {
 			};
 		}, this);
 
+		return newImgData;
+	},
+	
+	_getGrayscaleImageData: function(imgData){
+		var newImgData = this.previewContext.createImageData(imgData);
+		
+		this.forEachPixel(imgData, function(pixel, _, __, index){
+			var colorValue = this.pixelToGrayscale(pixel);
+			for(var len = 3; len--;)
+				pixel[len] = colorValue;
+			this.setPixel(newImgData, index, pixel);
+		}, this);
+		
+		return newImgData;
+	},
+
+	_applyConvolution: function(imgData, order, callback){
+		var grayscaleImgData = this._getGrayscaleImageData(imgData),
+			newImgData = this.previewContext.createImageData(grayscaleImgData),
+
+			data = grayscaleImgData.data,
+			width = grayscaleImgData.width,
+			height = grayscaleImgData.height,
+			halfOrder = Math.floor(order / 2),
+			pixelLength = 4,
+
+			maxWidth = width - halfOrder,
+			maxHeight = height - halfOrder;
+		
+		// TODO: Iterate over the imageData object, collecting the matrix for each pixel (except borders!)
+		// Then, call the callback function, passing the matrix as argument. The callback must return the new pixel value
+		// At the end, just set the returned pixel to the correct location
+
+		for(var y = 0, offset = 0, pixel; y < height; y++){
+			for(var x = 0; x < width; x++, offset += pixelLength){
+
+				// Se o pixel não estiver nas bordas, realiza a convolução
+				if(x >= halfOrder && y >= halfOrder && x < maxWidth && y < maxHeight){
+					var matrix = [];
+
+					for(var x1 = 0; x1 < order; x1++){
+						matrix[x1] = [];
+
+						for(var y1 = 0; y1 < order; y1++){
+							var currentOffset = ((y + y1 - halfOrder) * width + (x + x1 - halfOrder)) * pixelLength;
+							matrix[x1][y1] = data.subarray(currentOffset, currentOffset + pixelLength);
+						}
+					}
+					
+					pixel = callback.call(this, matrix);
+				}
+				else
+					pixel = data.subarray(offset, offset + pixelLength);
+
+				this.setPixel(newImgData, offset, pixel);
+			}
+		}
+		
 		return newImgData;
 	},
 	
