@@ -10,6 +10,10 @@ var App = {
 			input: args.input
 		};
 
+		this.PIXEL_LENGTH = 4;
+		this.WHITE_PIXEL = [255, 255, 255, 255];
+		this.BLACK_PIXEL = [0, 0, 0, 255];
+
 		this._prepareInputs(args.sidebar);
 		this._buildContent(args.content);
 	},
@@ -156,7 +160,7 @@ var App = {
 			mirror_horizontally: 'mirrorHorizontally',
 			mirror_vertically: 'mirrorVertically',
 			translate_50: 'translate50',
-			custom_thresholding: 'customThreesholding',
+			custom_thresholding: 'customThresholding',
 			median_filter: 'medianFilter',
 			border_detection_sobel: 'detectBorderSobel',
 			border_detection_kirsch: 'detectBorderKirsch'
@@ -173,9 +177,9 @@ var App = {
 			bottomPixels = [];
 
 		this.forEachPixel(imgData, function(pixel, _, y){
-			var colorValue = App.averagePixel(pixel);
+			var colorValue = this.getAverageOf(pixel);
 			(y < halfHeight ? topPixels : bottomPixels).push(colorValue);
-		}, obj);
+		});
 
 		// Exibir resultados na interface
 		var result = this.html.result,
@@ -214,11 +218,11 @@ var App = {
 			blackPixel = [0, 0, 0, 255];
 
 		this.forEachPixel(imgData, function(pixel, _, __, index){
-			var colorValue = this.averagePixel(pixel),
+			var colorValue = this.getAverageOf(pixel),
 				newPixel = colorValue >= avg ? blackPixel : pixel;
 
 			this.setPixel(newImgData, index, newPixel);
-		}, this);
+		});
 
 		var canvas = this._createCanvasFromImageData(newImgData);
 		this._replaceResultContent(canvas);
@@ -232,11 +236,11 @@ var App = {
 			pixel150 = [150, 150, 150, 255];
 
 		this.forEachPixel(imgData, function(pixel, _, __, index){
-			var colorValue = this.averagePixel(pixel),
+			var colorValue = this.getAverageOf(pixel),
 				newPixel = colorValue >= mode ? pixel150 : pixel;
 
 			this.setPixel(newImgData, index, newPixel);
-		}, this);
+		});
 
 		var canvas = this._createCanvasFromImageData(newImgData);
 		this._replaceResultContent(canvas);
@@ -246,15 +250,14 @@ var App = {
 		var imgData = this.getPreviewImageData(),
 			obj = this.getImageDataInfo(imgData),
 			median = this._median(obj.allPixels),
-			newImgData = this.previewContext.createImageData(imgData),
-			whitePixel = [255, 255, 255, 255];
+			newImgData = this.previewContext.createImageData(imgData);
 
 		this.forEachPixel(imgData, function(pixel, _, __, index){
-			var colorValue = this.averagePixel(pixel),
-				newPixel = colorValue >= median ? whitePixel : pixel;
+			var colorValue = this.getAverageOf(pixel),
+				newPixel = colorValue >= median ? this.WHITE_PIXEL : pixel;
 
 			this.setPixel(newImgData, index, newPixel);
-		}, this);
+		});
 
 		var canvas = this._createCanvasFromImageData(newImgData);
 		this._replaceResultContent(canvas);
@@ -268,11 +271,11 @@ var App = {
 			pixel100 = [100, 100, 100, 255];
 
 		this.forEachPixel(imgData, function(pixel, _, __, index){
-			var colorValue = this.averagePixel(pixel),
+			var colorValue = this.getAverageOf(pixel),
 				newPixel = colorValue < avg ? pixel100 : pixel;
 
 			this.setPixel(newImgData, index, newPixel);
-		}, this);
+		});
 
 		var canvas = this._createCanvasFromImageData(newImgData);
 		this._replaceResultContent(canvas);
@@ -283,16 +286,14 @@ var App = {
 			obj = this.getImageDataInfo(imgData),
 			median = this._median(obj.allPixels),
 			avg = this._average(obj.allPixels),
-			newImgData = this.previewContext.createImageData(imgData),
-			pixel255 = [255, 255, 255, 255],
-			pixel0 = [0, 0, 0, 255];
+			newImgData = this.previewContext.createImageData(imgData);
 
 		this.forEachPixel(imgData, function(pixel, _, __, index){
-			var colorValue = this.averagePixel(pixel),
-				newPixel = colorValue >= median ? pixel255 : colorValue < avg ? pixel0 : pixel;
+			var colorValue = this.getAverageOf(pixel),
+				newPixel = colorValue >= median ? this.WHITE_PIXEL : colorValue < avg ? this.BLACK_PIXEL : pixel;
 
 			this.setPixel(newImgData, index, newPixel);
-		}, this);
+		});
 
 		var canvas = this._createCanvasFromImageData(newImgData);
 		this._replaceResultContent(canvas);
@@ -336,7 +337,7 @@ var App = {
 				x: width - x,
 				y: y
 			};
-		}, this);
+		});
 
 		var canvas = this._createCanvasFromImageData(newImgData);
 		this._replaceResultContent(canvas);
@@ -352,7 +353,7 @@ var App = {
 				x: x,
 				y: height - y
 			};
-		}, this);
+		});
 
 		var canvas = this._createCanvasFromImageData(newImgData);
 		this._replaceResultContent(canvas);
@@ -368,41 +369,40 @@ var App = {
 				x: x + size,
 				y: y + size
 			};
-		}, this);
+		});
 
 		var canvas = this._createCanvasFromImageData(newImgData);
 		this._replaceResultContent(canvas);
 	},
 	
-	customThreesholding: function(value){
+	customThresholding: function(value){
 		var imgData = this.getPreviewImageData(),
-			newImgData = this.previewContext.createImageData(imgData),
-			whitePixel = [255, 255, 255, 255],
-			blackPixel = [0, 0, 0, 255];
+			newImgData = this.previewContext.createImageData(imgData);
+
+		if(!this._isGrayscale(imgData))
+			imgData = this._getGrayscaleImageData(imgData);
 
 		this.forEachPixel(imgData, function(pixel, _, __, index){
-			var colorValue = this.pixelToGrayscale(pixel),
-				newPixel = colorValue >= value ? whitePixel : blackPixel;
-
+			var newPixel = this[pixel[0] >= value ? 'WHITE_PIXEL' : 'BLACK_PIXEL'];
 			this.setPixel(newImgData, index, newPixel);
-		}, this);
+		});
 
 		var canvas = this._createCanvasFromImageData(newImgData);
 		this._replaceResultContent(canvas);
 	},
-	
+
 	medianFilter: function(){
-		var imgData = this.getPreviewImageData(),
-			newImgData = this._applyMedianFilter(imgData);
+		var imgData = this.getPreviewImageData();
+		if(!this._isGrayscale(imgData))
+			imgData = this._getGrayscaleImageData(imgData);
+		imgData = this._applyMedianFilter(imgData);
 
-		var canvas = this._createCanvasFromImageData(newImgData);
+		var canvas = this._createCanvasFromImageData(imgData);
 		this._replaceResultContent(canvas);
 	},
-	
+
 	detectBorderSobel: function(threshold){
 		var imgData = this.getPreviewImageData(),
-			whitePixel = [255, 255, 255, 255],
-			blackPixel = [0, 0, 0, 255],
 			kernels = [
 				[
 					[1, 0, -1],
@@ -415,11 +415,12 @@ var App = {
 					[-1, -2, -1]
 				]
 			];
-			
-		imgData = this._getGrayscaleImageData(imgData);
+
+		if(!this._isGrayscale(imgData))
+			imgData = this._getGrayscaleImageData(imgData);
 		imgData = this._applyMedianFilter(imgData);
-		
-		var newImgData = this._applyConvolution(imgData, 3, function(matrix){
+
+		imgData = this._applyConvolution(imgData, 3, function(matrix){
 			var sum = [0, 0];
 			for(var x = 0, len = matrix.length; x < len; x++){
 				for(var y = 0; y < len; y++){
@@ -430,18 +431,15 @@ var App = {
 			}
 			
 			var value = Math.round(Math.sqrt(Math.pow(sum[0], 2) + Math.pow(sum[1], 2))) % 255;
-			//return [value, value, value, 255];
-			return value >= threshold ? whitePixel : blackPixel;
+			return this[value >= threshold ? 'WHITE_PIXEL' : 'BLACK_PIXEL'];
 		});
 
-		var canvas = this._createCanvasFromImageData(newImgData);
+		var canvas = this._createCanvasFromImageData(imgData);
 		this._replaceResultContent(canvas);
 	},
 	
 	detectBorderKirsch: function(threshold){
 		var imgData = this.getPreviewImageData(),
-			whitePixel = [255, 255, 255, 255],
-			blackPixel = [0, 0, 0, 255],
 			kernel = [
 				[5, -3, -3],
 				[5, 0, -3],
@@ -474,10 +472,11 @@ var App = {
 			zeroFilledArr.push(0);
 		}
 
-		imgData = this._getGrayscaleImageData(imgData);
+		if(!this._isGrayscale(imgData))
+			imgData = this._getGrayscaleImageData(imgData);
 		imgData = this._applyMedianFilter(imgData);
 		
-		var newImgData = this._applyConvolution(imgData, 3, function(matrix){
+		imgData = this._applyConvolution(imgData, 3, function(matrix){
 			var localKernels = kernels,
 				all = zeroFilledArr.slice();
 
@@ -490,11 +489,10 @@ var App = {
 			}
 
 			var value = Math.max.apply(Math, all);
-			// return [value, value, value, 255];
-			return value >= threshold ? whitePixel : blackPixel;
+			return this[value >= threshold ? 'WHITE_PIXEL' : 'BLACK_PIXEL'];
 		});
 
-		var canvas = this._createCanvasFromImageData(newImgData);
+		var canvas = this._createCanvasFromImageData(imgData);
 		this._replaceResultContent(canvas);
 	},
 
@@ -519,44 +517,43 @@ var App = {
 
 		// Itera sobre todos os pixels, realizando as verificações necessárias
 		this.forEachPixel(imgData, function(pixel, x, y){
-			var colorValue = App.averagePixel(pixel);
-			this.histogram[colorValue]++;
-			this.allPixels.push(colorValue);
-		}, obj);
+			var colorValue = this.getAverageOf(pixel);
+			obj.histogram[colorValue]++;
+			obj.allPixels.push(colorValue);
+		});
 
 		return obj;
 	},
 	
-	forEachPixel: function(imageData, callback, self){
+	forEachPixel: function(imageData, callback){
 		var data = imageData.data,
 			width = imageData.width,
-			height = imageData.height,
-			pixelLength = 4;
+			height = imageData.height;
 
 		for(var offset = 0, y = 0; y < height; y++){
-			for(var x = 0; x < width; x++, offset += pixelLength)
-				callback.call(self, data.subarray(offset, offset + pixelLength), x, y, offset);
+			for(var x = 0; x < width; x++, offset += this.PIXEL_LENGTH)
+				callback.call(this, data.subarray(offset, offset + this.PIXEL_LENGTH), x, y, offset);
 		}
 	},
 
-	averagePixel: function(pixel){
+	getAverageOf: function(pixel){
 		return Math.round((pixel[0] + pixel[1] + pixel[2]) / 3);
 	},
 
-	pixelToGrayscale: function(pixel){
+	getGrayscaleOf: function(pixel){
 		return Math.round(pixel[0] * .2126 + pixel[1] * .7152 + pixel[2] * .0722);
 	},
-	
-	setPixel: function(imgData, index, pixel){
+
+	setPixel: function(imgData, offset, pixel){
 		// Replaces the pixel at the right index of the ImageData object
 		for(var data = imgData.data, len = pixel.length; len--;)
-			data[index + len] = pixel[len];
+			data[offset + len] = pixel[len];
 	},
 
 	setPixelAt: function(imgData, x, y, pixel){
 		this.setPixel(imgData, pixel.length * (y * imgData.width + x), pixel);
 	},
-	
+
 	isLocatedInside: function(imgData, x, y){
 		for(var props = ['width', 'height'], values = [x, y], len = props.length; len--;){
 			var half = Math.floor(imgData[props[len]] / 2);
@@ -567,17 +564,16 @@ var App = {
 		return true;
 	},
 	
-	forEachPixelRealocate: function(imgDataSrc, imgDataDst, callback, self){
+	forEachPixelRealocate: function(imgDataSrc, imgDataDst, callback){
 		var data = imgDataSrc.data,
 			width = imgDataSrc.width,
-			height = imgDataSrc.height,
-			pixelLength = 4;
+			height = imgDataSrc.height;
 
 		for(var y = 0, offset = 0; y < height; y++){
-			for(var x = 0; x < width; x++, offset += pixelLength){
-				var obj = callback.call(self, x, y);
+			for(var x = 0; x < width; x++, offset += this.PIXEL_LENGTH){
+				var obj = callback.call(this, x, y);
 				if(obj)
-					this.setPixelAt(imgDataDst, obj.x, obj.y, data.subarray(offset, offset + pixelLength));
+					this.setPixelAt(imgDataDst, obj.x, obj.y, data.subarray(offset, offset + this.PIXEL_LENGTH));
 			}
 		}
 	},
@@ -591,7 +587,7 @@ var App = {
 			var localCountNum = countNum, len = powCountNum; // Replicate variables in this scope
 			for(var x = Math.floor(num * x), y = Math.floor(num * y), counter = 0; counter < len; counter++)
 				this.setPixelAt(newImgData, x + (counter % localCountNum), y + Math.floor(counter / localCountNum), pixel);
-		}, this);
+		});
 
 		return newImgData;
 	},
@@ -622,20 +618,20 @@ var App = {
 				x: Math.round(x),
 				y: Math.round(y)
 			};
-		}, this);
+		});
 
 		return newImgData;
 	},
 	
 	_getGrayscaleImageData: function(imgData){
 		var newImgData = this.previewContext.createImageData(imgData);
-		
+	
 		this.forEachPixel(imgData, function(pixel, _, __, index){
-			var colorValue = this.pixelToGrayscale(pixel);
+			var colorValue = this.getGrayscaleOf(pixel);
 			for(var len = 3; len--;)
 				pixel[len] = colorValue;
 			this.setPixel(newImgData, index, pixel);
-		}, this);
+		});
 		
 		return newImgData;
 	},
@@ -644,10 +640,10 @@ var App = {
 		var newImgData = this.previewContext.createImageData(imgData),
 
 			data = imgData.data,
+			newData = new Uint8ClampedArray(data),
 			width = imgData.width,
 			height = imgData.height,
 			halfOrder = Math.floor(order / 2),
-			pixelLength = 4,
 
 			maxWidth = width - halfOrder,
 			maxHeight = height - halfOrder;
@@ -657,7 +653,7 @@ var App = {
 		// At the end, just set the returned pixel to the correct location
 
 		for(var y = 0, offset = 0, pixel; y < height; y++){
-			for(var x = 0; x < width; x++, offset += pixelLength){
+			for(var x = 0; x < width; x++, offset += this.PIXEL_LENGTH){
 
 				// Se o pixel não estiver nas bordas, realiza a convolução
 				if(x >= halfOrder && y >= halfOrder && x < maxWidth && y < maxHeight){
@@ -667,20 +663,19 @@ var App = {
 						matrix[x1] = [];
 
 						for(var y1 = 0; y1 < order; y1++){
-							var currentOffset = ((y + y1 - halfOrder) * width + (x + x1 - halfOrder)) * pixelLength;
-							matrix[x1][y1] = data.subarray(currentOffset, currentOffset + pixelLength);
+							var currentOffset = ((y + y1 - halfOrder) * width + (x + x1 - halfOrder)) * this.PIXEL_LENGTH;
+							matrix[x1][y1] = data.subarray(currentOffset, currentOffset + this.PIXEL_LENGTH);
 						}
 					}
 					
 					pixel = callback.call(this, matrix);
+					for(var len = pixel.length; len--;)
+						newData[offset + len] = pixel[len];
 				}
-				else
-					pixel = data.subarray(offset, offset + pixelLength);
-
-				this.setPixel(newImgData, offset, pixel);
 			}
 		}
-		
+
+		this.setPixel(newImgData, 0, newData);
 		return newImgData;
 	},
 	
@@ -692,11 +687,20 @@ var App = {
 					arr[x * len + y] = matrix[x][y][0];
 			}
 
-			var median = Math.round(this._average(arr));
+			var median = this._median(arr);
 			return [median, median, median, 255];
 		});
 	},
-	
+
+	_isGrayscale: function(imageData){
+		for(var data = imageData.data, len = data.length, offset = 0; offset < len; offset += this.PIXEL_LENGTH){
+			if(data[offset] != data[offset + 1] || data[offset] != data[offset + 2])
+				return false;
+		}
+
+		return true;
+	},
+
 	// Métodos com operações matemáticas
 
 	_average: function(arr){
