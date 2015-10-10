@@ -76,17 +76,35 @@ ul{
 	margin: 5px auto;
 	width: 100%;
 }
-#sidebar .operations label span, #sidebar .operations label input{
+#sidebar .operations label span, #sidebar .operations label input, #sidebar .operations label output{
 	vertical-align: middle;
 }
 #sidebar .operations label .labeled-range{
+	position: relative;
 	margin-left: 10px;
+	display: inline-block;
+	overflow: hidden;
 	font-size: 14px;
-	line-height: 21px;
+	line-height: 14px;
 	color: #666;
 }
 #sidebar .operations label .labeled-range input{
+	display: block;
 	width: 135px;
+}
+#sidebar .operations label .labeled-range .display-min{
+	float: left;
+}
+#sidebar .operations label .labeled-range .display-max{
+	float: right;
+}
+#sidebar .operations label .labeled-range output{
+	position: absolute;
+	left: 50%;
+	bottom: 0;
+	margin-left: -15px;
+	width: 30px;
+	text-align: center;
 }
 
 #image-info{

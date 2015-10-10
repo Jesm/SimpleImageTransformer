@@ -9,20 +9,40 @@ var App = {
 		this.html = {
 			input: args.input
 		};
-		
-		var buttons = args.sidebar.getElementsByTagName('button');
+
+		this._prepareInputs(args.sidebar);
+		this._buildContent(args.content);
+	},
+
+	_prepareInputs: function(sidebar){
+		function buttonCall(){
+			App.execute(this.dataset.action);
+		}
+
+		var buttons = sidebar.getElementsByTagName('button');
 		[].slice.call(buttons).forEach(function(btn){
-			btn.addEventListener('click', this._commandCall);
+			btn.addEventListener('click', buttonCall);
 		}, this);
 
-		var inputs = args.sidebar.querySelectorAll('input[type="range"]');
+		var inputs = sidebar.querySelectorAll('input[type="range"]');
 		[].slice.call(inputs).forEach(function(element){
-			element.addEventListener('change', this._commandCall);
+			var span = this._create('span');
+			span.classList.add('labeled-range');
+			this._create('span', element.min, span).classList.add('display-min');
+			var output = this._create('output', '-', span);
+			this._create('span', element.max, span).classList.add('display-max');
+
+			element.addEventListener('change', function(){
+				var value = Math.round(+this.value);
+				output['value' in output ? 'value' : 'textContent'] = value;
+				App.execute(this.dataset.action, value);
+			});
+
+			element.parentNode.insertBefore(span, element);
+			span.insertBefore(element, span.firstChild);
 		}, this);
 		
 		this.html.input.addEventListener('change', this._uploadFile);
-
-		this._buildContent(args.content);
 	},
 
 	_buildContent: function(element){
@@ -65,10 +85,6 @@ var App = {
 		this.html.result.innerHTML = '';
 	},
 
-	_commandCall: function(ev){
-		App.execute(this.dataset.action, this.value, ev);
-	},
-	
 	_replaceResultContent: function(element){
 		this.html.result.innerHTML = '';
 		if(element)
@@ -125,7 +141,7 @@ var App = {
 
 	// Métodos da aplicação
 	
-	execute: function(str, value, ev){
+	execute: function(str, value){
 		var methods = {
 			display_info: 'displayInfo',
 			greater_avg_black: 'paintBlackGreaterAvg',
@@ -146,7 +162,7 @@ var App = {
 			border_detection_kirsch: 'detectBorderKirsch'
 		};
 		
-		this[methods[str]](value, ev);
+		this[methods[str]](value);
 	},
 	
 	displayInfo: function(){
@@ -359,10 +375,6 @@ var App = {
 	},
 	
 	customThreesholding: function(value){
-		var value = Math.round(+value);
-		if(value < 0 || value > 255)
-			return alert('O valor deve estar no intervalo [0, 255]!');
-		
 		var imgData = this.getPreviewImageData(),
 			newImgData = this.previewContext.createImageData(imgData),
 			whitePixel = [255, 255, 255, 255],
@@ -388,10 +400,6 @@ var App = {
 	},
 	
 	detectBorderSobel: function(threshold){
-		threshold = Math.round(+threshold);
-		if(threshold < 0 || threshold > 255)
-			return alert('O valor deve estar no intervalo [0, 255]!');
-		
 		var imgData = this.getPreviewImageData(),
 			whitePixel = [255, 255, 255, 255],
 			blackPixel = [0, 0, 0, 255],
@@ -431,10 +439,6 @@ var App = {
 	},
 	
 	detectBorderKirsch: function(threshold){
-		threshold = Math.round(+threshold);
-		if(threshold < 0 || threshold > 255)
-			return alert('O valor deve estar no intervalo [0, 255]!');
-		
 		var imgData = this.getPreviewImageData(),
 			whitePixel = [255, 255, 255, 255],
 			blackPixel = [0, 0, 0, 255],
