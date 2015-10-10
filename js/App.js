@@ -141,7 +141,9 @@ var App = {
 			mirror_vertically: 'mirrorVertically',
 			translate_50: 'translate50',
 			custom_thresholding: 'customThreesholding',
-			median_filter: 'medianFilter'
+			median_filter: 'medianFilter',
+			border_detection_sobel: 'detectBorderSobel',
+			border_detection_kirsch: 'detectBorderKirsch'
 		};
 		
 		this[methods[str]](value, ev);
@@ -378,26 +380,122 @@ var App = {
 	},
 	
 	medianFilter: function(){
-		var imgData = this.getPreviewImageData();
+		var imgData = this.getPreviewImageData(),
+			newImgData = this._applyMedianFilter(imgData);
 
+		var canvas = this._createCanvasFromImageData(newImgData);
+		this._replaceResultContent(canvas);
+	},
+	
+	detectBorderSobel: function(threshold){
+		threshold = Math.round(+threshold);
+		if(threshold < 0 || threshold > 255)
+			return alert('O valor deve estar no intervalo [0, 255]!');
+		
+		var imgData = this.getPreviewImageData(),
+			whitePixel = [255, 255, 255, 255],
+			blackPixel = [0, 0, 0, 255],
+			kernels = [
+				[
+					[1, 0, -1],
+					[2, 0, -2],
+					[1, 0, -1]
+				],
+				[
+					[1, 2, 1],
+					[0, 0, 0],
+					[-1, -2, -1]
+				]
+			];
+			
+		imgData = this._getGrayscaleImageData(imgData);
+		imgData = this._applyMedianFilter(imgData);
+		
 		var newImgData = this._applyConvolution(imgData, 3, function(matrix){
-			var arr = [];
+			var sum = [0, 0];
 			for(var x = 0, len = matrix.length; x < len; x++){
-				for(var y = 0; y < len; y++)
-					arr[x * len + y] = matrix[x][y][0];
+				for(var y = 0; y < len; y++){
+					var pixelValue = matrix[x][y][0];
+					for(var z = 2; z--;)
+						sum[z] += pixelValue * kernels[z][x][y];
+				}
 			}
-
-			var median = Math.round(this._average(arr));
-			debugger
-			return [median, median, median, 255];
+			
+			var value = Math.round(Math.sqrt(Math.pow(sum[0], 2) + Math.pow(sum[1], 2))) % 255;
+			//return [value, value, value, 255];
+			return value >= threshold ? whitePixel : blackPixel;
 		});
 
 		var canvas = this._createCanvasFromImageData(newImgData);
 		this._replaceResultContent(canvas);
 	},
 	
+	detectBorderKirsch: function(threshold){
+		threshold = Math.round(+threshold);
+		if(threshold < 0 || threshold > 255)
+			return alert('O valor deve estar no intervalo [0, 255]!');
+		
+		var imgData = this.getPreviewImageData(),
+			whitePixel = [255, 255, 255, 255],
+			blackPixel = [0, 0, 0, 255],
+			kernel = [
+				[5, -3, -3],
+				[5, 0, -3],
+				[5, -3, -3]
+			],
+			kernels = [],
+			zeroFilledArr = [],
+			kernelLen = kernel.length,
+			kernelOrder = Math.pow(kernelLen, 2),
+			middleIndex = Math.floor(kernelOrder / 2);
+
+		// Gerando os kernels necessários para a convolução
+		for(var len = 8; len--;){
+			var kernelCopy = JSON.parse(JSON.stringify(kernel));
+			
+			for(var len1 = kernelOrder; len1--;){
+				if(len1 == middleIndex)
+					continue;
+
+				var distanceToMiddle = middleIndex - len1,
+					addValue = Math.abs(distanceToMiddle) > 2 ? 1 : kernelLen,
+					factor = (addValue == 1 && distanceToMiddle > 0) || (addValue == kernelLen && len1 % kernelLen > kernelLen / 2) ? 1 : -1,
+					newIndex = (len1 + addValue * factor) % kernelOrder;
+
+				kernelCopy[Math.floor(newIndex / kernelLen)][newIndex % kernelLen] = kernel[Math.floor(len1 / kernelLen)][len1 % kernelLen];
+			}
+
+			kernel = kernelCopy;
+			kernels.push(kernel);
+			zeroFilledArr.push(0);
+		}
+
+		imgData = this._getGrayscaleImageData(imgData);
+		imgData = this._applyMedianFilter(imgData);
+		
+		var newImgData = this._applyConvolution(imgData, 3, function(matrix){
+			var localKernels = kernels,
+				all = zeroFilledArr.slice();
+
+			for(var x = 0, len = matrix.length; x < len; x++){
+				for(var y = 0; y < len; y++){
+					var pixelValue = matrix[x][y][0];
+					for(var z = localKernels.length; z--;)
+						all[z] += pixelValue * localKernels[z][x][y];
+				}
+			}
+
+			var value = Math.max.apply(Math, all);
+			// return [value, value, value, 255];
+			return value >= threshold ? whitePixel : blackPixel;
+		});
+
+		var canvas = this._createCanvasFromImageData(newImgData);
+		this._replaceResultContent(canvas);
+	},
+
 	// Métodos de interação com objetos ImageData
-	
+
 	getPreviewImageData: function(){
 		if(!this.loadedImage)
 			throw "No image was uploaded!";
@@ -539,12 +637,11 @@ var App = {
 	},
 
 	_applyConvolution: function(imgData, order, callback){
-		var grayscaleImgData = this._getGrayscaleImageData(imgData),
-			newImgData = this.previewContext.createImageData(grayscaleImgData),
+		var newImgData = this.previewContext.createImageData(imgData),
 
-			data = grayscaleImgData.data,
-			width = grayscaleImgData.width,
-			height = grayscaleImgData.height,
+			data = imgData.data,
+			width = imgData.width,
+			height = imgData.height,
 			halfOrder = Math.floor(order / 2),
 			pixelLength = 4,
 
@@ -581,6 +678,19 @@ var App = {
 		}
 		
 		return newImgData;
+	},
+	
+	_applyMedianFilter: function(imgData){
+		return this._applyConvolution(imgData, 3, function(matrix){
+			var arr = [];
+			for(var x = 0, len = matrix.length; x < len; x++){
+				for(var y = 0; y < len; y++)
+					arr[x * len + y] = matrix[x][y][0];
+			}
+
+			var median = Math.round(this._average(arr));
+			return [median, median, median, 255];
+		});
 	},
 	
 	// Métodos com operações matemáticas

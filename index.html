@@ -54,6 +54,30 @@
 						<button data-action="median_filter">Aplicar filtro da mediana</button>
 					</div>
 				</section>
+				
+				<section id="exercise-4">
+					<h3><a href="#exercise-4">Atividade 4</a></h3>
+					<div class="inner">
+						<label>
+							<span>Aplicar algoritmo Sobel</span>
+							<span class="labeled-range">
+								<span>0</span>
+								<input type="range" min="0" max="255" data-action="border_detection_sobel" onchange="document.getElementById('labeled-range-value2').textContent = this.value + '/'">
+								<span id="labeled-range-value2"></span>
+								<span>255</span>
+							</span>
+						</label>
+						<label>
+							<span>Aplicar algoritmo Kirsch</span>
+							<span class="labeled-range">
+								<span>0</span>
+								<input type="range" min="0" max="255" data-action="border_detection_kirsch" onchange="document.getElementById('labeled-range-value3').textContent = this.value + '/'">
+								<span id="labeled-range-value3"></span>
+								<span>255</span>
+							</span>
+						</label>
+					</div>
+				</section>
 			</div>
 		</section>
 
