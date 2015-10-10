@@ -7,6 +7,7 @@ var App = {
 	init: function(args){
 		this.loadedImage = false;
 		this.html = {
+			content: args.content,
 			input: args.input
 		};
 
@@ -15,7 +16,7 @@ var App = {
 		this.BLACK_PIXEL = [0, 0, 0, 255];
 
 		this._prepareInputs(args.sidebar);
-		this._buildContent(args.content);
+		this._buildContent();
 	},
 
 	_prepareInputs: function(sidebar){
@@ -49,7 +50,7 @@ var App = {
 		this.html.input.addEventListener('change', this._uploadFile);
 	},
 
-	_buildContent: function(element){
+	_buildContent: function(){
 		var fragment = document.createDocumentFragment();
 		
 		this.html.preview = this._create('canvas');
@@ -60,7 +61,7 @@ var App = {
 		this.html.result.classList.add('result');
 		fragment.appendChild(this.html.result);
 
-		element.appendChild(fragment);
+		this.html.content.appendChild(fragment);
 	},
 
 	_uploadFile: function(){
@@ -143,9 +144,19 @@ var App = {
 		return fragment;
 	},
 
+	_enableLoader: function(){
+		this.html.content.classList.add('processing');
+	},
+
+	_disableLoader: function(){
+		this.html.content.classList.remove('processing');
+	},
+
 	// Métodos da aplicação
 	
 	execute: function(str, value){
+		this._enableLoader();
+
 		var methods = {
 			display_info: 'displayInfo',
 			greater_avg_black: 'paintBlackGreaterAvg',
@@ -166,7 +177,10 @@ var App = {
 			border_detection_kirsch: 'detectBorderKirsch'
 		};
 		
-		this[methods[str]](value);
+		setTimeout(function(){
+			App[methods[str]](value);
+			App._disableLoader();
+		}, 16);
 	},
 	
 	displayInfo: function(){

@@ -115,6 +115,37 @@ ul{
 	margin: 20px auto;
 	float: left;
 }
+
+#content #processing-overlay{
+	position: fixed;
+	z-index: 1;
+	left: 0;
+	top: 0;
+	display: none;
+}
+#content.processing #processing-overlay{
+	display: block;
+	background: #FFF;
+	background: rgba(255, 255, 255, .7);
+	font-size: 32px;
+	font-style: italic;
+}
+#content #processing-overlay, #content #processing-overlay .table, #content #processing-overlay .table-cell{
+	width: 100%;
+	height: 100%;
+}
+#content #processing-overlay .table{
+	display: table;
+}
+#content #processing-overlay .table-cell{
+	display: table-cell;
+	vertical-align: middle;
+	text-align: center;
+}
+#content #pr/*ocessing-overlay span{
+	display: table-cell;
+}*/
+
 canvas{
 	display: none;
 }
