@@ -390,18 +390,13 @@ var App = {
 	},
 	
 	customThresholding: function(value){
-		var imgData = this.getPreviewImageData(),
-			newImgData = this.previewContext.createImageData(imgData);
+		var imgData = this.getPreviewImageData();
 
 		if(!this._isGrayscale(imgData))
 			imgData = this._getGrayscaleImageData(imgData);
+		imgData = this._applyCustomThresholding(imgData, value);
 
-		this.forEachPixel(imgData, function(pixel, _, __, index){
-			var newPixel = this[pixel[0] >= value ? 'WHITE_PIXEL' : 'BLACK_PIXEL'];
-			this.setPixel(newImgData, index, newPixel);
-		});
-
-		var canvas = this._createCanvasFromImageData(newImgData);
+		var canvas = this._createCanvasFromImageData(imgData);
 		this._replaceResultContent(canvas);
 	},
 
@@ -445,8 +440,10 @@ var App = {
 			}
 			
 			var value = Math.round(Math.sqrt(Math.pow(sum[0], 2) + Math.pow(sum[1], 2))) % 255;
-			return this[value >= threshold ? 'WHITE_PIXEL' : 'BLACK_PIXEL'];
+			return [value, value, value, 255];
 		});
+
+		imgData = this._applyCustomThresholding(imgData, threshold);
 
 		var canvas = this._createCanvasFromImageData(imgData);
 		this._replaceResultContent(canvas);
@@ -490,7 +487,7 @@ var App = {
 			imgData = this._getGrayscaleImageData(imgData);
 		imgData = this._applyMedianFilter(imgData);
 		
-		imgData = this._applyConvolution(imgData, 3, function(matrix){
+		imgData = this._applyConvolution(imgData, kernelLen, function(matrix){
 			var localKernels = kernels,
 				all = zeroFilledArr.slice();
 
@@ -503,8 +500,10 @@ var App = {
 			}
 
 			var value = Math.max.apply(Math, all);
-			return this[value >= threshold ? 'WHITE_PIXEL' : 'BLACK_PIXEL'];
+			return [value, value, value, 255];
 		});
+
+		imgData = this._applyCustomThresholding(imgData, threshold);
 
 		var canvas = this._createCanvasFromImageData(imgData);
 		this._replaceResultContent(canvas);
@@ -661,10 +660,6 @@ var App = {
 
 			maxWidth = width - halfOrder,
 			maxHeight = height - halfOrder;
-		
-		// TODO: Iterate over the imageData object, collecting the matrix for each pixel (except borders!)
-		// Then, call the callback function, passing the matrix as argument. The callback must return the new pixel value
-		// At the end, just set the returned pixel to the correct location
 
 		for(var y = 0, offset = 0, pixel; y < height; y++){
 			for(var x = 0; x < width; x++, offset += this.PIXEL_LENGTH){
@@ -713,6 +708,17 @@ var App = {
 		}
 
 		return true;
+	},
+
+	_applyCustomThresholding: function(imageData, threshold){
+		var newImgData = this.previewContext.createImageData(imageData);
+
+		this.forEachPixel(imageData, function(pixel, _, __, index){
+			var newPixel = this[pixel[0] >= threshold ? 'WHITE_PIXEL' : 'BLACK_PIXEL'];
+			this.setPixel(newImgData, index, newPixel);
+		});
+
+		return newImgData;
 	},
 
 	// Métodos com operações matemáticas
