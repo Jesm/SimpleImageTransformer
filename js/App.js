@@ -1,9 +1,9 @@
 'use strict';
 
 var App = {
-	
+
 	// Métodos de interface
-	
+
 	init: function(args){
 		this.loadedImage = false;
 		this.html = {
@@ -14,6 +14,10 @@ var App = {
 		this.PIXEL_LENGTH = 4;
 		this.WHITE_PIXEL = [255, 255, 255, 255];
 		this.BLACK_PIXEL = [0, 0, 0, 255];
+
+		// Properties for cache
+		this._cacheObj = null;
+		this._currentActionName = null;
 
 		this._prepareInputs(args.sidebar);
 		this._buildContent();
@@ -37,7 +41,7 @@ var App = {
 			var output = this._create('output', '-', span);
 			this._create('span', element.max, span).classList.add('display-max');
 
-			element.addEventListener('change', function(){
+			element.addEventListener('input', function(){
 				var value = Math.round(+this.value);
 				output['value' in output ? 'value' : 'textContent'] = value;
 				App.execute(this.dataset.action, value);
@@ -68,7 +72,7 @@ var App = {
 		if(this.files && this.files.length){
 			var file = this.files[0],
 				img = new Image();
-			
+
 			img.onload = function(){
 				App.loadPreviewImage(this);
 			};
@@ -78,16 +82,18 @@ var App = {
 	
 	loadPreviewImage: function(image){
 		var preview = this.html.preview;
-		
+
 		preview.classList.add('active');
 		preview.width = image.width;
 		preview.height = image.height;
-		
+
 		this.previewContext.drawImage(image, 0, 0);
-		
+
 		this.loadedImage = true;
 		document.body.classList.add('img-loaded');
 		this.html.result.innerHTML = '';
+
+		this._cacheObj = {};
 	},
 
 	_replaceResultContent: function(element){
@@ -152,6 +158,14 @@ var App = {
 		this.html.content.classList.remove('processing');
 	},
 
+	_cacheFunctionReturn: function(callback){
+		var str = this._currentActionName;
+		if(!this._cacheObj[str])
+			this._cacheObj[str] = callback.call(this);
+
+		return this._cacheObj[str];
+	},
+
 	// Métodos da aplicação
 	
 	execute: function(str, value){
@@ -176,11 +190,13 @@ var App = {
 			border_detection_sobel: 'detectBorderSobel',
 			border_detection_kirsch: 'detectBorderKirsch'
 		};
-		
+
+		this._currentActionName = str;
+
 		setTimeout(function(){
 			App[methods[str]](value);
 			App._disableLoader();
-		}, 16);
+		}, 0);
 	},
 	
 	displayInfo: function(){
@@ -390,10 +406,17 @@ var App = {
 	},
 	
 	customThresholding: function(value){
-		var imgData = this.getPreviewImageData();
+		var imgData = this._cacheFunctionReturn(function(){
 
-		if(!this._isGrayscale(imgData))
-			imgData = this._getGrayscaleImageData(imgData);
+			var imgData = this.getPreviewImageData();
+
+			if(!this._isGrayscale(imgData))
+				imgData = this._getGrayscaleImageData(imgData);
+
+			return imgData;
+
+		});
+
 		imgData = this._applyCustomThresholding(imgData, value);
 
 		var canvas = this._createCanvasFromImageData(imgData);
@@ -411,36 +434,42 @@ var App = {
 	},
 
 	detectBorderSobel: function(threshold){
-		var imgData = this.getPreviewImageData(),
-			kernels = [
-				[
-					[1, 0, -1],
-					[2, 0, -2],
-					[1, 0, -1]
-				],
-				[
-					[1, 2, 1],
-					[0, 0, 0],
-					[-1, -2, -1]
-				]
-			];
+		var imgData = this._cacheFunctionReturn(function(){
 
-		if(!this._isGrayscale(imgData))
-			imgData = this._getGrayscaleImageData(imgData);
-		imgData = this._applyMedianFilter(imgData);
+			var imgData = this.getPreviewImageData(),
+				kernels = [
+					[
+						[1, 0, -1],
+						[2, 0, -2],
+						[1, 0, -1]
+					],
+					[
+						[1, 2, 1],
+						[0, 0, 0],
+						[-1, -2, -1]
+					]
+				];
 
-		imgData = this._applyConvolution(imgData, 3, function(matrix){
-			var sum = [0, 0];
-			for(var x = 0, len = matrix.length; x < len; x++){
-				for(var y = 0; y < len; y++){
-					var pixelValue = matrix[x][y][0];
-					for(var z = 2; z--;)
-						sum[z] += pixelValue * kernels[z][x][y];
+			if(!this._isGrayscale(imgData))
+				imgData = this._getGrayscaleImageData(imgData);
+			imgData = this._applyMedianFilter(imgData);
+
+			imgData = this._applyConvolution(imgData, 3, function(matrix){
+				var sum = [0, 0];
+				for(var x = 0, len = matrix.length; x < len; x++){
+					for(var y = 0; y < len; y++){
+						var pixelValue = matrix[x][y][0];
+						for(var z = 2; z--;)
+							sum[z] += pixelValue * kernels[z][x][y];
+					}
 				}
-			}
-			
-			var value = Math.round(Math.sqrt(Math.pow(sum[0], 2) + Math.pow(sum[1], 2))) % 255;
-			return [value, value, value, 255];
+				
+				var value = Math.round(Math.sqrt(Math.pow(sum[0], 2) + Math.pow(sum[1], 2))) % 255;
+				return [value, value, value, 255];
+			});
+
+			return imgData;
+
 		});
 
 		imgData = this._applyCustomThresholding(imgData, threshold);
@@ -450,57 +479,63 @@ var App = {
 	},
 	
 	detectBorderKirsch: function(threshold){
-		var imgData = this.getPreviewImageData(),
-			kernel = [
-				[5, -3, -3],
-				[5, 0, -3],
-				[5, -3, -3]
-			],
-			kernels = [],
-			zeroFilledArr = [],
-			kernelLen = kernel.length,
-			kernelOrder = Math.pow(kernelLen, 2),
-			middleIndex = Math.floor(kernelOrder / 2);
+		var imgData = this._cacheFunctionReturn(function(){
 
-		// Gerando os kernels necessários para a convolução
-		for(var len = 8; len--;){
-			var kernelCopy = JSON.parse(JSON.stringify(kernel));
-			
-			for(var len1 = kernelOrder; len1--;){
-				if(len1 == middleIndex)
-					continue;
+			var imgData = this.getPreviewImageData(),
+				kernel = [
+					[5, -3, -3],
+					[5, 0, -3],
+					[5, -3, -3]
+				],
+				kernels = [],
+				zeroFilledArr = [],
+				kernelLen = kernel.length,
+				kernelOrder = Math.pow(kernelLen, 2),
+				middleIndex = Math.floor(kernelOrder / 2);
 
-				var distanceToMiddle = middleIndex - len1,
-					addValue = Math.abs(distanceToMiddle) > 2 ? 1 : kernelLen,
-					factor = (addValue == 1 && distanceToMiddle > 0) || (addValue == kernelLen && len1 % kernelLen > kernelLen / 2) ? 1 : -1,
-					newIndex = (len1 + addValue * factor) % kernelOrder;
+			// Gerando os kernels necessários para a convolução
+			for(var len = 8; len--;){
+				var kernelCopy = JSON.parse(JSON.stringify(kernel));
+				
+				for(var len1 = kernelOrder; len1--;){
+					if(len1 == middleIndex)
+						continue;
 
-				kernelCopy[Math.floor(newIndex / kernelLen)][newIndex % kernelLen] = kernel[Math.floor(len1 / kernelLen)][len1 % kernelLen];
-			}
+					var distanceToMiddle = middleIndex - len1,
+						addValue = Math.abs(distanceToMiddle) > 2 ? 1 : kernelLen,
+						factor = (addValue == 1 && distanceToMiddle > 0) || (addValue == kernelLen && len1 % kernelLen > kernelLen / 2) ? 1 : -1,
+						newIndex = (len1 + addValue * factor) % kernelOrder;
 
-			kernel = kernelCopy;
-			kernels.push(kernel);
-			zeroFilledArr.push(0);
-		}
-
-		if(!this._isGrayscale(imgData))
-			imgData = this._getGrayscaleImageData(imgData);
-		imgData = this._applyMedianFilter(imgData);
-		
-		imgData = this._applyConvolution(imgData, kernelLen, function(matrix){
-			var localKernels = kernels,
-				all = zeroFilledArr.slice();
-
-			for(var x = 0, len = matrix.length; x < len; x++){
-				for(var y = 0; y < len; y++){
-					var pixelValue = matrix[x][y][0];
-					for(var z = localKernels.length; z--;)
-						all[z] += pixelValue * localKernels[z][x][y];
+					kernelCopy[Math.floor(newIndex / kernelLen)][newIndex % kernelLen] = kernel[Math.floor(len1 / kernelLen)][len1 % kernelLen];
 				}
+
+				kernel = kernelCopy;
+				kernels.push(kernel);
+				zeroFilledArr.push(0);
 			}
 
-			var value = Math.max.apply(Math, all);
-			return [value, value, value, 255];
+			if(!this._isGrayscale(imgData))
+				imgData = this._getGrayscaleImageData(imgData);
+			imgData = this._applyMedianFilter(imgData);
+			
+			imgData = this._applyConvolution(imgData, kernelLen, function(matrix){
+				var localKernels = kernels,
+					all = zeroFilledArr.slice();
+
+				for(var x = 0, len = matrix.length; x < len; x++){
+					for(var y = 0; y < len; y++){
+						var pixelValue = matrix[x][y][0];
+						for(var z = localKernels.length; z--;)
+							all[z] += pixelValue * localKernels[z][x][y];
+					}
+				}
+
+				var value = Math.max.apply(Math, all);
+				return [value, value, value, 255];
+			});
+
+			return imgData;
+
 		});
 
 		imgData = this._applyCustomThresholding(imgData, threshold);
