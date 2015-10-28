@@ -41,11 +41,15 @@ var App = {
 			var output = this._create('output', '-', span);
 			this._create('span', element.max, span).classList.add('display-max');
 
-			element.addEventListener('input', function(){
+			function execAction(ev){
+				ev.stopPropagation();
+
 				var value = Math.round(+this.value);
 				output['value' in output ? 'value' : 'textContent'] = value;
 				App.execute(this.dataset.action, value);
-			});
+			}
+			element.addEventListener('input', execAction);
+			element.addEventListener('change', execAction);
 
 			element.parentNode.insertBefore(span, element);
 			span.insertBefore(element, span.firstChild);
