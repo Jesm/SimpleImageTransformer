@@ -195,7 +195,8 @@ var App = {
 			border_detection_kirsch: 'detectBorderKirsch',
 			apply_dilatation: 'applyDilatation',
 			apply_erosion: 'applyErosion',
-			apply_opening: 'applyOpening'
+			apply_opening: 'applyOpening',
+			apply_closing: 'applyClosing'
 		};
 
 		this._currentActionName = str;
@@ -606,6 +607,32 @@ var App = {
 			[-value, -value, -value]
 		];
 		imgData = this._applyStructuringElement(imgData, structuringElement, Math.min, bgValue);
+
+		var canvas = this._createCanvasFromImageData(imgData);
+		this._replaceResultContent(canvas);
+	},
+
+	applyClosing: function(){
+		var imgData = this.getPreviewImageData();
+		if(!this._isGrayscale(imgData))
+			imgData = this._getGrayscaleImageData(imgData);
+
+		var value = 10,
+			bgValue = 255;
+
+		var structuringElement = [
+			[-value, -value, -value],
+			[-value, -value, -value],
+			[-value, -value, -value]
+		];
+		imgData = this._applyStructuringElement(imgData, structuringElement, Math.min, bgValue);
+
+		structuringElement = [
+			[value, value, value],
+			[value, value, value],
+			[value, value, value]
+		];
+		imgData = this._applyStructuringElement(imgData, structuringElement, Math.max, bgValue);
 
 		var canvas = this._createCanvasFromImageData(imgData);
 		this._replaceResultContent(canvas);
