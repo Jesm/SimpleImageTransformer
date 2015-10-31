@@ -194,7 +194,8 @@ var App = {
 			border_detection_sobel: 'detectBorderSobel',
 			border_detection_kirsch: 'detectBorderKirsch',
 			apply_dilatation: 'applyDilatation',
-			apply_erosion: 'applyErosion'
+			apply_erosion: 'applyErosion',
+			apply_opening: 'applyOpening'
 		};
 
 		this._currentActionName = str;
@@ -580,6 +581,32 @@ var App = {
 
 		imgData = this._applyStructuringElement(imgData, structuringElement, Math.max, 255);
 		
+		var canvas = this._createCanvasFromImageData(imgData);
+		this._replaceResultContent(canvas);
+	},
+
+	applyOpening: function(){
+		var imgData = this.getPreviewImageData();
+		if(!this._isGrayscale(imgData))
+			imgData = this._getGrayscaleImageData(imgData);
+
+		var value = 10,
+			bgValue = 255;
+
+		var structuringElement = [
+			[value, value, value],
+			[value, value, value],
+			[value, value, value]
+		];
+		imgData = this._applyStructuringElement(imgData, structuringElement, Math.max, bgValue);
+
+		structuringElement = [
+			[-value, -value, -value],
+			[-value, -value, -value],
+			[-value, -value, -value]
+		];
+		imgData = this._applyStructuringElement(imgData, structuringElement, Math.min, bgValue);
+
 		var canvas = this._createCanvasFromImageData(imgData);
 		this._replaceResultContent(canvas);
 	},
