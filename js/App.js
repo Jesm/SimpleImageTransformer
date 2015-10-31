@@ -193,7 +193,8 @@ var App = {
 			median_filter: 'medianFilter',
 			border_detection_sobel: 'detectBorderSobel',
 			border_detection_kirsch: 'detectBorderKirsch',
-			apply_dilatation: 'applyDilatation'
+			apply_dilatation: 'applyDilatation',
+			apply_erosion: 'applyErosion'
 		};
 
 		this._currentActionName = str;
@@ -553,7 +554,32 @@ var App = {
 		var imgData = this.getPreviewImageData();
 		if(!this._isGrayscale(imgData))
 			imgData = this._getGrayscaleImageData(imgData);
-		imgData = this._applyStructuringElement(imgData, 3, -10, 255);
+
+		var structuringElement = [
+			[-10, -10, -10],
+			[-10, -10, -10],
+			[-10, -10, -10]
+		];
+
+		imgData = this._applyStructuringElement(imgData, structuringElement, Math.min, 255);
+
+		var canvas = this._createCanvasFromImageData(imgData);
+		this._replaceResultContent(canvas);
+	},
+
+	applyErosion: function(){
+		var imgData = this.getPreviewImageData();
+		if(!this._isGrayscale(imgData))
+			imgData = this._getGrayscaleImageData(imgData);
+
+		var structuringElement = [
+			[10, 10, 10],
+			[10, 10, 10],
+			[10, 10, 10]
+		];
+
+		imgData = this._applyStructuringElement(imgData, structuringElement, Math.max, 255);
+		
 		var canvas = this._createCanvasFromImageData(imgData);
 		this._replaceResultContent(canvas);
 	},
@@ -770,17 +796,15 @@ var App = {
 		return newImgData;
 	},
 
-	_applyStructuringElement: function (imgData, order, value, bgValue){
-		var newImgData = this.previewContext.createImageData(imgData),
-
-			data = imgData.data,
+	_applyStructuringElement: function (imgData, strucElem, operation, bgValue){
+		var data = imgData.data,
 			width = imgData.width,
 			height = imgData.height,
+			order = strucElem.length,
 			halfOrder = Math.floor(order / 2),
 
 			maxWidth = width - halfOrder,
-			maxHeight = height - halfOrder,
-			op = Math[value > 0 ? 'max' : 'min'];
+			maxHeight = height - halfOrder;
 
 		// Gerar matriz com valores
 		var matrix = [];
@@ -791,44 +815,51 @@ var App = {
 		}
 
 		var newMatrix = JSON.parse(JSON.stringify(matrix)); // Cria uma copia da matriz
+
 		for(var x = 0; x < height; x++){
 			for(var y = 0; y < width; y++){
 
 				if(y >= halfOrder && x >= halfOrder && y < maxWidth && x < maxHeight){
 					var list = [];
 
-					for(var x1 = -halfOrder; x1 <= halfOrder; x1++){
-						for(var y1 = -halfOrder; y1 <= halfOrder; y1++){
-							// if(x1 != halfOrder && y1 != halfOrder)
-							// 	continue;
+					for(var x1 = 0; x1 < order; x1++){
+						for(var y1 = 0; y1 < order; y1++){
+							var factor = strucElem[x1][y1];
+							if(factor == null)
+								continue;
 
-							var currentValue = matrix[x + x1][y + y1];
+							var currentValue = matrix[x + x1 - halfOrder][y + y1 - halfOrder];
 							if(currentValue != bgValue)
-								list.push(currentValue);
+								list.push(currentValue + factor);
 						}
 					}
 
 					if(!list.length)
 						continue;
 
-					var finalValue = op.apply(Math, list) + value;
+					var finalValue = operation.apply(Math, list);
 					if(finalValue < 0)
 						finalValue = 0;
 					else if(finalValue > 255)
 						finalValue = 255;
 
-					for(var x1 = -halfOrder; x1 <= halfOrder; x1++){
-						for(var y1 = -halfOrder; y1 <= halfOrder; y1++){
-							// if(x1 != halfOrder && y1 != halfOrder)
-							// 	continue;
+					for(var x1 = 0; x1 < order; x1++){
+						for(var y1 = 0; y1 < order; y1++){
+							if(strucElem[x1][y1] != null){
+								var tmpX = x + x1 - halfOrder,
+									tmpY = y + y1 - halfOrder,
+									tmpValue = operation.apply(Math, [newMatrix[tmpX][tmpY], finalValue]);
 
-							newMatrix[x + x1][y + y1] = finalValue;
+								newMatrix[tmpX][tmpY] = tmpValue;
+							}
 						}
 					}
 
 				}
 			}
 		}
+
+		var newImgData = this.previewContext.createImageData(imgData);
 
 		for(var x = 0, offset = 0, newData = newImgData.data; x < height; x++){
 			for(var y = 0; y < width; y++, offset += this.PIXEL_LENGTH){
