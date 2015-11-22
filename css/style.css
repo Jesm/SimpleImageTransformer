@@ -9,6 +9,7 @@
 body{
 	font-family: Calibri, sans-serif;
 	background: url('../img/bg.jpg');
+	background-attachment: fixed;
 	color: #333;
 }
 main{

@@ -185,6 +185,7 @@ var App = {
 
 			var infoElement = this._create('ul', null, li);
 			infoElement.classList.add('info');
+			this._create('li', '<strong>Área:</strong> ' + object.pixelCount + 'px;', infoElement);
 			this._create('li', '<strong>Largura:</strong> ' + object.width + 'px;', infoElement);
 			this._create('li', '<strong>Altura:</strong> ' + object.height + 'px;', infoElement);
 		}
