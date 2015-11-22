@@ -161,6 +161,26 @@ canvas.active{
 	padding: 20px;
 	background: #FFF;
 }
+#content .object-list, #content .object-list ul{
+	padding: 0;
+	list-style: none inside;
+	background: transparent;
+}
+#content .object-list > li{
+	border-top: 1px solid #333;
+	padding: 20px;
+	overflow: hidden;
+}
+#content .object-list > li:first-child{
+	border-top: none;
+}
+#content .object-list img{
+	float: left;
+}
+#content .object-list .info{
+	margin: 10px;
+	float: left;
+}
 
 #content .histogram{
 	position: relative;

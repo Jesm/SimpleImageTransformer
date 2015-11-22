@@ -170,6 +170,63 @@ var App = {
 		return this._cacheObj[str];
 	},
 
+	_getObjectDisplayComponent: function(data){
+		var fragment = document.createDocumentFragment();
+		this._create('h2', 'Objetos identificados na imagem', fragment);
+		var list = this._create('ul', null, fragment);
+		list.classList.add('object-list');
+
+		for(var x = 0; x < data.objects.length; x++){
+			var object = data.objects[x],
+				li = this._create('li', null, list),
+				image = this._getImageFromDataObject(data, object, .2);
+
+			li.appendChild(image);
+
+			var infoElement = this._create('ul', null, li);
+			infoElement.classList.add('info');
+			this._create('li', '<strong>Largura:</strong> ' + object.width + 'px;', infoElement);
+			this._create('li', '<strong>Altura:</strong> ' + object.height + 'px;', infoElement);
+		}
+
+		return fragment;
+	},
+
+	_getImageFromDataObject: function(data, object, alpha){
+		var imageData = new ImageData(object.width, object.height),
+			maxValue = 255;
+
+		if(alpha == null)
+			alpha = 1;
+		alpha *= maxValue;
+
+		for(var y = 0, offset = 0; y < object.height; y++){
+			var yAxis = object.y + y;
+
+			for(var x = 0; x < object.width; x++, offset += this.PIXEL_LENGTH){
+				var xAxis = object.x + x,
+					belongsToObj = data.referenceMatrix[yAxis][xAxis] == object,
+					color = data.simpleMatrix[yAxis][xAxis];
+
+				for(var len = 3; len--;)
+					imageData.data[offset + len] = color;
+
+				imageData.data[offset + 3] = belongsToObj ? maxValue : alpha;
+			}
+		}
+
+		// Gera elemento de imagem a partir do objeto ImageData
+		var image = new Image(object.width, object.height),
+			canvas = this._create('canvas');
+
+		canvas.width = imageData.width;
+		canvas.height = imageData.height;
+		canvas.getContext('2d').putImageData(imageData, 0, 0);
+		image.src = canvas.toDataURL();
+
+		return image;
+	},
+
 	// Métodos da aplicação
 
 	execute: function(str, value){
@@ -644,8 +701,10 @@ var App = {
 		if(!this._isGrayscale(imgData))
 			imgData = this._getGrayscaleImageData(imgData);
 		
-		var objectData = this._getObjectData(imgData, 6);
-		debugger
+		var objectData = this._getObjectData(imgData, 20),
+			list = this._getObjectDisplayComponent(objectData);
+
+		this._replaceResultContent(list);
 	},
 
 	// Métodos de interação com objetos ImageData
