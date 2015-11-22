@@ -196,7 +196,8 @@ var App = {
 			apply_dilatation: 'applyDilatation',
 			apply_erosion: 'applyErosion',
 			apply_opening: 'applyOpening',
-			apply_closing: 'applyClosing'
+			apply_closing: 'applyClosing',
+			detect_objects: 'detectObjects'
 		};
 
 		this._currentActionName = str;
@@ -638,6 +639,15 @@ var App = {
 		this._replaceResultContent(canvas);
 	},
 
+	detectObjects: function(){
+		var imgData = this.getPreviewImageData();
+		if(!this._isGrayscale(imgData))
+			imgData = this._getGrayscaleImageData(imgData);
+		
+		var objectData = this._getObjectData(imgData, 6);
+		debugger
+	},
+
 	// Métodos de interação com objetos ImageData
 
 	getPreviewImageData: function(){
@@ -861,14 +871,8 @@ var App = {
 			maxHeight = height - halfOrder;
 
 		// Gerar matriz com valores
-		var matrix = [];
-		for(var x = 0, offset = 0; x < height; x++){
-			matrix[x] = new Uint8ClampedArray(width);
-			for(var y = 0; y < width; y++, offset += this.PIXEL_LENGTH)
-				matrix[x][y] = data[offset];
-		}
-
-		var newMatrix = JSON.parse(JSON.stringify(matrix)); // Cria uma copia da matriz
+		var matrix = this._toSimpleMatrix(imgData),
+			newMatrix = JSON.parse(JSON.stringify(matrix)); // Cria uma copia da matriz
 
 		for(var x = 0; x < height; x++){
 			for(var y = 0; y < width; y++){
@@ -925,6 +929,120 @@ var App = {
 		}
 
 		return newImgData;
+	},
+	
+	_getObjectData: function(imageData, colorInterval){
+		var data = imageData.data,
+			colorDistance = colorInterval / 2,
+			returnData = {
+				width: imageData.width,
+				height: imageData.height,
+				simpleMatrix: this._toSimpleMatrix(imageData), // Gera uma matriz de valores simples a partir do objeto ImageData
+				referenceMatrix: [],
+				objects: []
+			};
+		
+		// Gera a matriz de referências do mesmo tamanho da imagem,
+		// preenchendo todos os seus pontos com referências nulas
+		for(var x = 0; x < returnData.height; x++)
+			returnData.referenceMatrix[x] = new Array(returnData.width);
+			
+		for(var y = 0; y < returnData.height; y++){
+			for(var x = 0; x < returnData.width; x++){
+				// Se encontrar um ponto de referência nula,
+				// inicia o algoritmo flood fill a partir deste, gerando um novo objeto
+				if(returnData.referenceMatrix[y][x])
+					continue;
+					
+				var object = {
+					limits: {
+						xAxis: [x, x],
+						yAxis: [y, y]
+					},
+					color: returnData.simpleMatrix[y][x],
+					pixelCount: 0
+				};
+				returnData.objects.push(object);
+
+				// Para evitar recursão (que seria excessiva em imagens maiores), cria um array temporário abaixo e
+				// o utiliza para armazenar todos os pixels encontrados a partir da cor do objeto.
+				// Através de subsequentes iterações, todos os pixels da região são encontrados
+				var currentPixels, foundPixels = [[x, y]];
+
+				while(foundPixels.length){
+					currentPixels = foundPixels;
+					foundPixels = [];
+
+					for(var len = currentPixels.length; len--;){
+						var tmp = currentPixels[len];
+						this._floodFillMatrix(returnData, object, tmp[0], tmp[1], foundPixels, colorDistance);
+					}
+				}
+			}
+		}
+
+		// Ordena os objetos encontrados de maneira decrescente, de acordo com a quantidade de pixels
+		returnData.objects.sort(function(a, b){
+			return b.pixelCount - a.pixelCount;
+		});
+
+		for(var len = returnData.objects.length; len--;){
+			var object = returnData.objects[len];
+			object.x = object.limits.xAxis[0];
+			object.y = object.limits.yAxis[0];
+			object.width = object.limits.xAxis[1] - object.limits.xAxis[0] + 1;
+			object.height = object.limits.yAxis[1] - object.limits.yAxis[0] + 1;
+		}
+
+		return returnData;
+	},
+
+	_floodFillMatrix: function(data, object, x, y, pixels, colorDiff){
+		if(data.referenceMatrix[y][x])
+			return;
+
+		data.referenceMatrix[y][x] = object;
+		object.pixelCount++;
+
+		// Atualiza os limites da imagem
+		if(x < object.limits.xAxis[0])
+			object.limits.xAxis[0] = x;
+		else if(x > object.limits.xAxis[1])
+			object.limits.xAxis[1] = x;
+		if(y < object.limits.yAxis[0])
+			object.limits.yAxis[0] = y;
+		else if(y > object.limits.yAxis[1])
+			object.limits.yAxis[1] = y;
+
+		for(var num = 4, half = num / 2, len = num; len--;){
+			var factor = len >= half ? 1 : -1,
+				modulus = len % 2,
+				newX = x + modulus * factor,
+				newY = y + (1 - modulus) * factor;
+			
+			if(
+				newX < data.width &&
+				newY < data.height &&
+				Math.min(newX, newY) >= 0 &&
+				Math.abs(data.simpleMatrix[newY][newX] - object.color) <= colorDiff
+			)
+				pixels.push([newX, newY]);
+		}
+	},
+
+	_toSimpleMatrix: function(imageData){		
+		var matrix = [],
+			data = imageData.data,
+			width = imageData.width,
+			height = imageData.height;
+		
+		for(var x = 0, offset = 0; x < height; x++){
+			matrix[x] = new Uint8ClampedArray(width);
+			for(var y = 0; y < width; y++, offset += this.PIXEL_LENGTH)
+				matrix[x][y] = data[offset];
+		}
+		
+		return matrix;
 	},
 
 	// Métodos com operações matemáticas
