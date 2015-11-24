@@ -188,41 +188,22 @@ var App = {
 			this._create('li', '<strong>Área:</strong> ' + object.pixelCount + 'px;', infoElement);
 			this._create('li', '<strong>Largura:</strong> ' + object.width + 'px;', infoElement);
 			this._create('li', '<strong>Altura:</strong> ' + object.height + 'px;', infoElement);
+
+			if(object._isRectangle)
+				this._create('li', '<strong>O objeto é um retângulo!</strong>', infoElement);
 		}
 
 		return fragment;
 	},
 
-	_getImageFromDataObject: function(data, object, alpha){
-		var imageData = new ImageData(object.width, object.height),
-			maxValue = 255;
-
-		if(alpha == null)
-			alpha = 1;
-		alpha *= maxValue;
-
-		for(var y = 0, offset = 0; y < object.height; y++){
-			var yAxis = object.y + y;
-
-			for(var x = 0; x < object.width; x++, offset += this.PIXEL_LENGTH){
-				var xAxis = object.x + x,
-					belongsToObj = data.referenceMatrix[yAxis][xAxis] == object,
-					color = data.simpleMatrix[yAxis][xAxis];
-
-				for(var len = 3; len--;)
-					imageData.data[offset + len] = color;
-
-				imageData.data[offset + 3] = belongsToObj ? maxValue : alpha;
-			}
-		}
-
+	_getImageFromDataObject: function(data, object){
 		// Gera elemento de imagem a partir do objeto ImageData
 		var image = new Image(object.width, object.height),
 			canvas = this._create('canvas');
 
-		canvas.width = imageData.width;
-		canvas.height = imageData.height;
-		canvas.getContext('2d').putImageData(imageData, 0, 0);
+		canvas.width = object.imageData.width;
+		canvas.height = object.imageData.height;
+		canvas.getContext('2d').putImageData(object.imageData, 0, 0);
 		image.src = canvas.toDataURL();
 
 		return image;
@@ -640,7 +621,7 @@ var App = {
 		];
 
 		imgData = this._applyStructuringElement(imgData, structuringElement, Math.max, 255);
-		
+
 		var canvas = this._createCanvasFromImageData(imgData);
 		this._replaceResultContent(canvas);
 	},
@@ -701,7 +682,7 @@ var App = {
 		var imgData = this.getPreviewImageData();
 		if(!this._isGrayscale(imgData))
 			imgData = this._getGrayscaleImageData(imgData);
-		
+
 		var objectData = this._getObjectData(imgData, 20),
 			list = this._getObjectDisplayComponent(objectData);
 
@@ -990,7 +971,7 @@ var App = {
 
 		return newImgData;
 	},
-	
+
 	_getObjectData: function(imageData, colorInterval){
 		var data = imageData.data,
 			colorDistance = colorInterval / 2,
@@ -1001,19 +982,19 @@ var App = {
 				referenceMatrix: [],
 				objects: []
 			};
-		
+
 		// Gera a matriz de referências do mesmo tamanho da imagem,
 		// preenchendo todos os seus pontos com referências nulas
 		for(var x = 0; x < returnData.height; x++)
 			returnData.referenceMatrix[x] = new Array(returnData.width);
-			
+
 		for(var y = 0; y < returnData.height; y++){
 			for(var x = 0; x < returnData.width; x++){
 				// Se encontrar um ponto de referência nula,
 				// inicia o algoritmo flood fill a partir deste, gerando um novo objeto
 				if(returnData.referenceMatrix[y][x])
 					continue;
-					
+
 				var object = {
 					limits: {
 						xAxis: [x, x],
@@ -1046,13 +1027,8 @@ var App = {
 			return b.pixelCount - a.pixelCount;
 		});
 
-		for(var len = returnData.objects.length; len--;){
-			var object = returnData.objects[len];
-			object.x = object.limits.xAxis[0];
-			object.y = object.limits.yAxis[0];
-			object.width = object.limits.xAxis[1] - object.limits.xAxis[0] + 1;
-			object.height = object.limits.yAxis[1] - object.limits.yAxis[0] + 1;
-		}
+		for(var len = returnData.objects.length; len--;)
+			this._prepareObject(returnData, returnData.objects[len], .2);
 
 		return returnData;
 	},
@@ -1079,7 +1055,7 @@ var App = {
 				modulus = len % 2,
 				newX = x + modulus * factor,
 				newY = y + (1 - modulus) * factor;
-			
+
 			if(
 				newX < data.width &&
 				newY < data.height &&
@@ -1090,19 +1066,59 @@ var App = {
 		}
 	},
 
-	_toSimpleMatrix: function(imageData){		
+	_toSimpleMatrix: function(imageData){
 		var matrix = [],
 			data = imageData.data,
 			width = imageData.width,
 			height = imageData.height;
-		
+
 		for(var x = 0, offset = 0; x < height; x++){
 			matrix[x] = new Uint8ClampedArray(width);
 			for(var y = 0; y < width; y++, offset += this.PIXEL_LENGTH)
 				matrix[x][y] = data[offset];
 		}
-		
+
 		return matrix;
+	},
+
+	_prepareObject: function(data, object, alpha){
+		object.x = object.limits.xAxis[0];
+		object.y = object.limits.yAxis[0];
+		object.width = object.limits.xAxis[1] - object.limits.xAxis[0] + 1;
+		object.height = object.limits.yAxis[1] - object.limits.yAxis[0] + 1;
+
+		var imageData = new ImageData(object.width, object.height),
+			maxValue = 255;
+
+		if(alpha == null)
+			alpha = 1;
+		alpha *= maxValue;
+
+		for(var y = 0, offset = 0; y < object.height; y++){
+			var yAxis = object.y + y;
+
+			for(var x = 0; x < object.width; x++, offset += this.PIXEL_LENGTH){
+				var xAxis = object.x + x,
+					belongsToObj = data.referenceMatrix[yAxis][xAxis] == object,
+					color = data.simpleMatrix[yAxis][xAxis];
+
+				for(var len = 3; len--;)
+					imageData.data[offset + len] = color;
+
+				imageData.data[offset + 3] = belongsToObj ? maxValue : alpha;
+			}
+		}
+
+		if(this._isRectangle(data, object))
+			object._isRectangle = true;
+		// else if(this._isCircle(data, object))
+			// object._isCircle = true;
+
+		object.imageData = imageData;
+	},
+
+	_isRectangle: function(data, object){
+		return object.width > object.height && object.width * object.height == object.pixelCount;
 	},
 
 	// Métodos com operações matemáticas
