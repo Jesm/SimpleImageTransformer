@@ -185,12 +185,18 @@ var App = {
 
 			var infoElement = this._create('ul', null, li);
 			infoElement.classList.add('info');
-			this._create('li', '<strong>Área:</strong> ' + object.pixelCount + 'px;', infoElement);
 			this._create('li', '<strong>Largura:</strong> ' + object.width + 'px;', infoElement);
 			this._create('li', '<strong>Altura:</strong> ' + object.height + 'px;', infoElement);
+			this._create('li', '<strong>Área:</strong> ' + object.pixelCount + 'px;', infoElement);
 
-			if(object._isRectangle)
+			if(object._isRectangle){
 				this._create('li', '<strong>O objeto é um retângulo!</strong>', infoElement);
+				this._create('li', '<strong>Perímetro:</strong> ' + object.perimeter.length + 'px;', infoElement);
+			}
+			else if(object._isCircle){
+				this._create('li', '<strong>O objeto é um círculo!</strong>', infoElement);
+				this._create('li', '<strong>Perímetro:</strong> ' + object.perimeter.length + 'px;', infoElement);
+			}
 		}
 
 		return fragment;
@@ -979,14 +985,13 @@ var App = {
 				width: imageData.width,
 				height: imageData.height,
 				simpleMatrix: this._toSimpleMatrix(imageData), // Gera uma matriz de valores simples a partir do objeto ImageData
-				referenceMatrix: [],
+
+				// Gera a matriz de referências do mesmo tamanho da imagem,
+				// preenchendo todos os seus pontos com referências nulas
+				referenceMatrix: this._createMatrixWithSize(imageData.width, imageData.height),
+
 				objects: []
 			};
-
-		// Gera a matriz de referências do mesmo tamanho da imagem,
-		// preenchendo todos os seus pontos com referências nulas
-		for(var x = 0; x < returnData.height; x++)
-			returnData.referenceMatrix[x] = new Array(returnData.width);
 
 		for(var y = 0; y < returnData.height; y++){
 			for(var x = 0; x < returnData.width; x++){
@@ -1031,6 +1036,13 @@ var App = {
 			this._prepareObject(returnData, returnData.objects[len], .2);
 
 		return returnData;
+	},
+
+	_createMatrixWithSize: function(width, height){
+		var matrix = new Array(height);
+		for(var x = 0; x < height; x++)
+			matrix[x] = new Array(width);
+		return matrix;
 	},
 
 	_floodFillMatrix: function(data, object, x, y, pixels, colorDiff){
@@ -1087,6 +1099,10 @@ var App = {
 		object.width = object.limits.xAxis[1] - object.limits.xAxis[0] + 1;
 		object.height = object.limits.yAxis[1] - object.limits.yAxis[0] + 1;
 
+		// Obtem uma coleção de coordenadas que contituem o perímetro da imagem
+		object.perimeter = this._getPerimeterArray(data, object);
+
+		// Prepara a imagem para ser exibida na interface
 		var imageData = new ImageData(object.width, object.height),
 			maxValue = 255;
 
@@ -1109,16 +1125,91 @@ var App = {
 			}
 		}
 
+		// Verifica se o objeto apresenta um retângulo ou círculo
 		if(this._isRectangle(data, object))
 			object._isRectangle = true;
-		// else if(this._isCircle(data, object))
-			// object._isCircle = true;
+		else if(this._isCircle(data, object))
+			object._isCircle = true;
 
 		object.imageData = imageData;
 	},
 
+	_getPerimeterArray: function(data, object){
+		for(var x = 0; x < object.width; x++){
+			var xAxis = x + object.x;
+
+			if(data.referenceMatrix[object.y][xAxis] == object){
+
+				var list = [],
+					first = [xAxis, object.y],
+					next = [first],
+					visitMatrix = this._createMatrixWithSize(data.width, data.height);
+
+				visitMatrix[first[1]][first[0]] = true;
+
+				for(var count = 0; count < next.length; count++){
+					var coord = next[count];
+					if(this._belongsToPerimeter(data, object, coord, next, visitMatrix))
+						list.push(coord);
+				}
+
+				return list;
+
+			}
+		}
+	},
+
+	_belongsToPerimeter: function(data, object, coord, next, visitMatrix){
+		//visitMatrix[coord[1]][coord[0]] = true;
+		var foundNeighbors = [];
+
+		for(var num = 4, half = num / 2, len = num; len--;){
+			var factor = len >= half ? 1 : -1,
+				modulus = len % 2,
+				newCoord = [coord[0] + modulus * factor, coord[1] + (1 - modulus) * factor];
+
+			if(
+				newCoord[0] < data.width &&
+				newCoord[1] < data.height &&
+				Math.min(newCoord[0], newCoord[1]) >= 0 &&
+				data.referenceMatrix[newCoord[1]][newCoord[0]] == object
+			)
+				foundNeighbors.push(newCoord);
+		}
+
+		var len = foundNeighbors.length;
+		for(;len--;){
+			var newCoord = foundNeighbors[len];
+			if(!visitMatrix[newCoord[1]][newCoord[0]]){
+				next.push(newCoord);
+				visitMatrix[newCoord[1]][newCoord[0]] = true;
+			}
+		}
+
+		return foundNeighbors.length < num;
+	},
+
 	_isRectangle: function(data, object){
 		return object.width > object.height && object.width * object.height == object.pixelCount;
+	},
+
+	_isCircle: function(data, object){
+		//if(object.width != object.height)
+			//return false;
+
+		var center = [Math.floor(object.width) / 2 + object.x, Math.floor(object.height) / 2 + object.y],
+			distances = [],
+			radius = object.width / 2;
+
+		for(var x = 0; x < object.perimeter.length; x++){
+			var coord = object.perimeter[x],
+				distance = Math.sqrt(Math.pow(coord[0] - center[0], 2) + Math.pow(coord[1] - center[1], 2));
+
+			if(Math.abs(distance - radius) > 2)
+				return false;
+		}
+
+		return true;
 	},
 
 	// Métodos com operações matemáticas
