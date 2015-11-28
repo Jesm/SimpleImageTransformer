@@ -185,17 +185,22 @@ var App = {
 
 			var infoElement = this._create('ul', null, li);
 			infoElement.classList.add('info');
-			this._create('li', '<strong>Largura:</strong> ' + object.width + 'px;', infoElement);
-			this._create('li', '<strong>Altura:</strong> ' + object.height + 'px;', infoElement);
-			this._create('li', '<strong>Área:</strong> ' + object.pixelCount + 'px;', infoElement);
+			this._create('li', '<strong>Largura:</strong> ' + object.width + 'px', infoElement);
+			this._create('li', '<strong>Altura:</strong> ' + object.height + 'px', infoElement);
+			this._create('li', '<strong>Área:</strong> ' + object.pixelCount + 'px', infoElement);
 
 			if(object._isRectangle){
 				this._create('li', '<strong>O objeto é um retângulo!</strong>', infoElement);
-				this._create('li', '<strong>Perímetro:</strong> ' + object.perimeter.length + 'px;', infoElement);
+				this._create('li', '<strong>Perímetro:</strong> ' + object.perimeter.length + 'px', infoElement);
 			}
 			else if(object._isCircle){
+				var perimeter = object.perimeter.length,
+					circularity = Math.pow(perimeter, 2) / (4 * Math.PI * object.pixelCount);
+
 				this._create('li', '<strong>O objeto é um círculo!</strong>', infoElement);
-				this._create('li', '<strong>Perímetro:</strong> ' + object.perimeter.length + 'px;', infoElement);
+				this._create('li', '<strong>Perímetro:</strong> ' + perimeter + 'px', infoElement);
+				var tmp =
+				this._create('li', '<strong>Circularidade:</strong> ' + circularity.toFixed(2), infoElement);
 			}
 		}
 
